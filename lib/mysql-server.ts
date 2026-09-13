@@ -15,11 +15,11 @@ const globalForPool = globalThis as typeof globalThis & {
 };
 
 export function resolveMysqlConfig(): MysqlConfig {
-  const host = process.env.DB_HOST || process.env.DB_HOSTNAME || '127.0.0.1';
-  const port = Number(process.env.DB_PORT || 3306);
-  const user = process.env.DB_USER || process.env.DB_USERNAME || 'root';
-  const password = process.env.DB_PASSWORD || '';
-  const database = process.env.DB_NAME || process.env.DB_DATABASE || 'sk88bd';
+  const host = process.env.DB_HOST || process.env.DB_HOSTNAME || process.env.MYSQL_HOST || '127.0.0.1';
+  const port = Number(process.env.DB_PORT || process.env.MYSQL_PORT || 3306);
+  const user = process.env.DB_USER || process.env.DB_USERNAME || process.env.MYSQL_USER || 'root';
+  const password = process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || '';
+  const database = process.env.DB_NAME || process.env.DB_DATABASE || process.env.MYSQL_DATABASE || 'sk88bd';
   return { host, port, user, password, database };
 }
 

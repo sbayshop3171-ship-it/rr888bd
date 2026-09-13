@@ -59,11 +59,11 @@ export type SupabaseClient = {
 };
 
 export function mysqlConfigFromEnv() {
-  const host = process.env.NEXT_PUBLIC_DB_HOST || process.env.DB_HOST || '127.0.0.1';
-  const port = Number(process.env.NEXT_PUBLIC_DB_PORT || process.env.DB_PORT || 3306);
-  const user = process.env.NEXT_PUBLIC_DB_USER || process.env.DB_USER || process.env.NEXT_PUBLIC_DB_USERNAME || process.env.DB_USERNAME || 'root';
-  const password = process.env.DB_PASSWORD || '';
-  const database = process.env.NEXT_PUBLIC_DB_NAME || process.env.DB_NAME || process.env.NEXT_PUBLIC_DB_DATABASE || process.env.DB_DATABASE || 'sk88bd';
+  const host = process.env.NEXT_PUBLIC_DB_HOST || process.env.DB_HOST || process.env.MYSQL_HOST || '127.0.0.1';
+  const port = Number(process.env.NEXT_PUBLIC_DB_PORT || process.env.DB_PORT || process.env.MYSQL_PORT || 3306);
+  const user = process.env.NEXT_PUBLIC_DB_USER || process.env.DB_USER || process.env.NEXT_PUBLIC_DB_USERNAME || process.env.DB_USERNAME || process.env.MYSQL_USER || 'root';
+  const password = process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || '';
+  const database = process.env.NEXT_PUBLIC_DB_NAME || process.env.DB_NAME || process.env.NEXT_PUBLIC_DB_DATABASE || process.env.DB_DATABASE || process.env.MYSQL_DATABASE || 'sk88bd';
   return { host, port, user, password, database };
 }
 
@@ -74,7 +74,7 @@ export const isBackendReady = () => {
 
 function apiBaseUrl() {
   if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
-  return process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'http://localhost:3000';
+  return process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 }
 
 function apiUrl(path: string) {
