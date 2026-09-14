@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { BRAND } from '@/lib/brand';
 import { t } from '@/lib/strings';
 import { openInstallSheet } from './usePwaInstall';
 
@@ -13,7 +12,7 @@ export default function DownloadStrip() {
   return (
     <div className="appbar">
       <div className="appbar__logo" aria-hidden>
-        <b>{BRAND.light}</b><span>{BRAND.accent}</span>
+        <img src="/download-app-icon.png" alt="" />
       </div>
       <div className="appbar__txt">
         <div className="appbar__title">{t.downloadBonus} &gt;&gt;&gt;</div>

@@ -1,6 +1,6 @@
-# Sk88bd — Gaming Platform
+# rr888bd — Gaming Platform
 
-[![CI - Build And Test](https://github.com/sbayshop3171-ship-it/Sk88bd/actions/workflows/ci.yml/badge.svg)](https://github.com/sbayshop3171-ship-it/Sk88bd/actions/workflows/ci.yml)
+[![CI - Build And Test](https://github.com/sbayshop3171-ship-it/rr888bd/actions/workflows/ci.yml/badge.svg)](https://github.com/sbayshop3171-ship-it/rr888bd/actions/workflows/ci.yml)
 
 Next.js (App Router) + TypeScript plus a Flutter signal APK. Bangla-first, BDT
 (৳), mobile-first phone-width column centred on desktop.

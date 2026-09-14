@@ -64,7 +64,7 @@ Example response:
 Local build:
 
 ```bash
-flutter run --dart-define=SIGNAL_API_BASE_URL=http://localhost:3000
+flutter run --dart-define=SIGNAL_API_BASE_URL=https://rr888bd.site
 ```
 
 For Android emulator, use `http://10.0.2.2:3000` instead of localhost.
@@ -74,5 +74,5 @@ For a physical Xiaomi device with `adb reverse tcp:3000 tcp:3000`, use
 Live APK:
 
 ```bash
-flutter build apk --release --dart-define=SIGNAL_API_BASE_URL=https://your-domain.com
+flutter build apk --release --dart-define=SIGNAL_API_BASE_URL=https://rr888bd.site
 ```

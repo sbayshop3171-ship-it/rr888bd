@@ -8,7 +8,7 @@ export interface MysqlDbConfig {
   database: string;
 }
 
-const MYSQL_POOL_KEY = '__sk88bd_mysql_pool__';
+const MYSQL_POOL_KEY = '__rr888bd_mysql_pool__';
 const globalForPool = globalThis as typeof globalThis & {
   [MYSQL_POOL_KEY]?: Awaited<ReturnType<typeof mysql.createPool>> & { __pk?: string };
 };

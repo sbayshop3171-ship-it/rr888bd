@@ -25,7 +25,7 @@ import { money } from '@/lib/brand';
    again on every page would be nagging, not an offer.
    ============================================================ */
 
-const SEEN_KEY = 'sk88bd:spin-offered';
+const SEEN_KEY = 'rr888bd:spin-offered';
 const SPIN_MS = 4200;
 
 export default function SpinWheel() {

@@ -9,7 +9,7 @@ export interface MysqlConfig {
   database: string;
 }
 
-const MYSQL_POOL_KEY = '__sk88bd_mysql_server_pool__';
+const MYSQL_POOL_KEY = '__rr888bd_mysql_server_pool__';
 const globalForPool = globalThis as typeof globalThis & {
   [MYSQL_POOL_KEY]?: Awaited<ReturnType<typeof mysql.createPool>> & { __pk?: string };
 };
@@ -19,7 +19,7 @@ export function resolveMysqlConfig(): MysqlConfig {
   const port = Number(process.env.DB_PORT || process.env.MYSQL_PORT || 3306);
   const user = process.env.DB_USER || process.env.DB_USERNAME || process.env.MYSQL_USER || 'root';
   const password = process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || '';
-  const database = process.env.DB_NAME || process.env.DB_DATABASE || process.env.MYSQL_DATABASE || 'sk88bd';
+  const database = process.env.DB_NAME || process.env.DB_DATABASE || process.env.MYSQL_DATABASE || 'rr888bd';
   return { host, port, user, password, database };
 }
 

@@ -10,8 +10,8 @@ class SettingSeeder extends Seeder
     public function run(): void
     {
         Setting::put('site', [
-            'name' => 'Sk88bd',
-            'domain' => 'sk88bd.live',
+            'name' => 'rr888bd',
+            'domain' => 'rr888bd.site',
             'currency' => 'BDT',
         ]);
 

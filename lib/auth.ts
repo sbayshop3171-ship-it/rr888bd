@@ -16,7 +16,7 @@
  * colliding with a real mailbox at the apex. No mail is ever sent to it —
  * email confirmation must stay off in Supabase Auth settings.
  */
-const IDENTITY_DOMAIN = 'id.sk88bd.live';
+const IDENTITY_DOMAIN = 'id.rr888bd.site';
 
 export const BD_PHONE = /^01\d{9}$/;
 
@@ -32,7 +32,7 @@ export function normalizePhone(raw: string): string {
 
 export const isValidPhone = (phone: string) => BD_PHONE.test(normalizePhone(phone.trim()));
 
-/** 01712345678 → 01712345678@id.sk88bd.live */
+/** 01712345678 → 01712345678@id.rr888bd.site */
 export function phoneToEmail(phone: string): string {
   const p = normalizePhone(phone.trim());
   if (!isValidPhone(p)) throw new Error('invalid phone');

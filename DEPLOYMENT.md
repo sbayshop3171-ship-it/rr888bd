@@ -10,9 +10,9 @@ option.
 ```bash
 git init
 git branch -M main
-git remote add origin https://github.com/sbayshop3171-ship-it/Sk88bd.git
+git remote add origin https://github.com/sbayshop3171-ship-it/rr888bd.git
 git add .
-git commit -m "Prepare Sk88bd live server build"
+git commit -m "Prepare rr888bd live server build"
 git push -u origin main
 ```
 
@@ -21,7 +21,7 @@ GitHub Actions workflow name: `CI - Build And Test`.
 After every push, open:
 
 ```text
-https://github.com/sbayshop3171-ship-it/Sk88bd/actions/workflows/ci.yml
+https://github.com/sbayshop3171-ship-it/rr888bd/actions/workflows/ci.yml
 ```
 
 If both `Web / Next.js` and `Mobile / Flutter APK` are green, the project is
@@ -32,8 +32,8 @@ ready to deploy from that commit.
 Use Node 20+.
 
 ```bash
-git clone https://github.com/sbayshop3171-ship-it/Sk88bd.git
-cd Sk88bd
+git clone https://github.com/sbayshop3171-ship-it/rr888bd.git
+cd rr888bd
 cp .env.production.example .env.production
 npm ci
 npm run build
@@ -71,7 +71,8 @@ Build the APK with your real backend URL:
 ```bash
 cd mobile/signal_app
 flutter pub get
-flutter build apk --release --dart-define=SIGNAL_API_BASE_URL=https://your-domain.com
+flutter build apk --release --dart-define=SIGNAL_API_BASE_URL=https://rr888bd.site
+cp build/app/outputs/flutter-apk/app-release.apk ../../apk/rr888bd.apk
 ```
 
 For local Xiaomi testing from the same machine:
@@ -88,5 +89,6 @@ adb install -r build/app/outputs/flutter-apk/app-debug.apk
 - `/admin/settings` site settings save and reload.
 - `/admin/app-keys` can generate/revoke/reset device access.
 - `/api/signal-terminal/snapshot` returns `401` without app token.
+- The live APK is served from `/rr888bd.apk` after the GitHub Actions deploy job.
 - Flutter app unlocks with app key and then auto-opens signal screen.
 - `/game/aviator` and mobile app show matching controlled demo signal rounds.

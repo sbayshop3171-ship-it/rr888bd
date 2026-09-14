@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
 async function player() {
   const cookieStore = await cookies();
-  const rawSession = cookieStore.get('sk88bd_session')?.value;
+  const rawSession = cookieStore.get('rr888bd_session')?.value;
   let cookieUserId = '';
   try {
     cookieUserId = String((JSON.parse(rawSession ?? '{}') as { user?: { id?: string } }).user?.id ?? '');

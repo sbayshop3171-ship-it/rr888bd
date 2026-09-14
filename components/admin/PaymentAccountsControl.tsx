@@ -184,7 +184,7 @@ export default function PaymentAccountsControl({
             <input
               value={form.holder}
               onChange={(e) => set('holder', e.target.value)}
-              placeholder="e.g. Sk88bd Agent 1"
+              placeholder="e.g. rr888bd Agent 1"
               disabled={busy}
             />
           </label>

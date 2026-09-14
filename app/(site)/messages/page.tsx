@@ -30,7 +30,7 @@ type Tab = 'inbox' | 'outbox';
 /** Read marks live in the browser: there is no per-player mail table to
     write to, and a read flag that only matters to the person reading it is
     not worth one. */
-const READ_KEY = 'sk88bd:mail-read';
+const READ_KEY = 'rr888bd:mail-read';
 
 export default function MessagesPage() {
   useLightSheet();

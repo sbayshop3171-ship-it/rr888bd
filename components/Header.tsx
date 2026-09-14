@@ -37,8 +37,7 @@ export default function Header() {
       </button>
 
       <Link href="/" className="logo" aria-label={BRAND.name}>
-        <Wordmark />
-        <Tagline />
+        <img className="logo__image" src="/rr888bd-logo.png" alt="" />
       </Link>
 
       <div className="hdr__actions">

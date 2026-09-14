@@ -3,8 +3,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 /**
  * Two doors to the same panel.
  *
- * Agents are given ag.sk88bd.com, or sk88bd.com/agent, rather than
- * sk88bd.com/admin: the address an agent hands round is not the operator's,
+ * Agents are given ag.rr888bd.site, or rr888bd.site/agent, rather than
+ * rr888bd.site/admin: the address an agent hands round is not the operator's,
  * and neither door should teach them the operator's own URL. Both are a
  * rewrite rather than a redirect, so the address bar keeps saying what was
  * typed — a redirect put /admin in front of every agent on their first

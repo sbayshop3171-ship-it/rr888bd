@@ -1,6 +1,6 @@
 /** Which door the panel was entered by.
 
-    The panel lives at /admin. Agents are given /agent (or ag.sk88bd.com),
+    The panel lives at /admin. Agents are given /agent (or ag.rr888bd.site),
     which `proxy.ts` rewrites onto the same routes — a rewrite, so the
     address bar keeps saying /agent instead of teaching every agent the
     operator's own URL. For that to hold past the first click, the links

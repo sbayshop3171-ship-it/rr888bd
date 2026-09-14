@@ -12,7 +12,7 @@ import { isValidPhone } from '@/lib/auth';
 import { t } from '@/lib/strings';
 
 /** Where the agent code waits if the visitor wanders off before signing up. */
-const AGENT_KEY = 'sk88bd.agent';
+const AGENT_KEY = 'rr888bd.agent';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -93,7 +93,7 @@ export default function RegisterPage() {
       };
 
       try {
-        localStorage.setItem('sk88bd_session', JSON.stringify(session));
+        localStorage.setItem('rr888bd_session', JSON.stringify(session));
         window.dispatchEvent(new Event('storage'));
         localStorage.removeItem(AGENT_KEY);
       } catch { /* private mode */ }

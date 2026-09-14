@@ -1,4 +1,7 @@
-const signalApiBaseUrl = String.fromEnvironment('SIGNAL_API_BASE_URL');
+const signalApiBaseUrl = String.fromEnvironment(
+	'SIGNAL_API_BASE_URL',
+	defaultValue: 'https://rr888bd.site',
+);
 
 const signalPollInterval = Duration(seconds: 2);
 

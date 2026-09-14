@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
    a favourites column this hook is the only thing that changes.
    ============================================================ */
 
-const KEY = 'sk88bd:favourites';
+const KEY = 'rr888bd:favourites';
 
 /** One shared list per tab, so every heart on the page agrees. */
 const listeners = new Set<(ids: string[]) => void>();

@@ -18,7 +18,7 @@ import { BET_ERROR, type BetReason } from '@/lib/aviator-bets';
 import { toPaisa, toTaka } from '@/lib/auth';
 import { money } from '@/lib/brand';
 
-const SEED_KEY = 'sk88bd:client-seed';
+const SEED_KEY = 'rr888bd:client-seed';
 
 export default function AviatorPage() {
   return <GameGate curtain="aviator"><Board /></GameGate>;

@@ -98,9 +98,9 @@ php artisan key:generate
 Then set the DB credentials in `.env`. For MySQL, create the database first:
 
 ```sql
-CREATE DATABASE sk88bd CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'sk88bd'@'localhost' IDENTIFIED BY 'change-me';
-GRANT ALL ON sk88bd.* TO 'sk88bd'@'localhost'; FLUSH PRIVILEGES;
+CREATE DATABASE rr888bd CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'rr888bd'@'localhost' IDENTIFIED BY 'change-me';
+GRANT ALL ON rr888bd.* TO 'rr888bd'@'localhost'; FLUSH PRIVILEGES;
 ```
 
 For a quicker start, put `DB_CONNECTION=sqlite` in `.env`, delete the other
@@ -124,8 +124,8 @@ keeps `laravel/`, `legacy/`, `docs/` and `scripts/` out of the Vercel build.
 Read `DEPLOYMENT.md`. Quick VPS flow:
 
 ```bash
-git clone https://github.com/sbayshop3171-ship-it/Sk88bd.git
-cd Sk88bd
+git clone https://github.com/sbayshop3171-ship-it/rr888bd.git
+cd rr888bd
 cp .env.production.example .env.production
 npm ci
 npm run build

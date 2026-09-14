@@ -447,7 +447,7 @@ function stakeOf(raw: number): number | Fail {
 /** A player-chosen seed is free text; keep it short and printable so it
     cannot be used to smuggle anything into the ledger ref. */
 const cleanSeed = (raw: unknown) =>
-  String(raw ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) || 'sk88bd';
+  String(raw ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) || 'rr888bd';
 
 type Who =
   | { ok: true; uid: string; db: NonNullable<ReturnType<typeof adminClient>> }

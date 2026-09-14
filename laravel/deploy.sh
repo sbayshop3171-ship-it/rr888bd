@@ -2,7 +2,7 @@
 #
 # Production deploy, run on the server from the app root.
 #
-#   ~/apps/sk88bd/laravel/deploy.sh
+#   ~/apps/rr888bd/laravel/deploy.sh
 #
 # Assumes the code is already on the box (rsync or git pull) and that
 # .env carries the real APP_KEY and database credentials. Front-end assets

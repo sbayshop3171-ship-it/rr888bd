@@ -8,13 +8,13 @@
    ============================================================ */
 
 export const BRAND = {
-    name: 'Sk88bd',
+    name: 'rr888bd',
     /** wordmark is split so the two halves can carry different gradients */
     light: 'SK',
     accent: '88BD',
     tag: 'bet',
     currency: '৳',
-    domain: 'sk88bd.live',
+    domain: 'rr888bd.site',
     email: 'tsportscom70@gmail.com',
     social: {
         whatsapp: 'https://wa.me/8801000000000',

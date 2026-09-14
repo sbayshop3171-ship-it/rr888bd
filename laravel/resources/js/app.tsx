@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import SiteLayout from './layouts/SiteLayout';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Sk88bd';
+const appName = import.meta.env.VITE_APP_NAME || 'rr888bd';
 
 const pages = import.meta.glob<{ default: ResolvedComponent }>('./pages/**/*.tsx');
 

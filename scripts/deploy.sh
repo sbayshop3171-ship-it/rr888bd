@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Deploy sk88bd.com from GitHub main onto the VPS. Run it ON the server, as
+# Deploy rr888bd.site from GitHub main onto the VPS. Run it ON the server, as
 # the site user (mehedi3) — the FASTPANEL terminal is already that shell:
 #
-#     ~/www/sk88bd.com/_node_app/scripts/deploy.sh
+#     ~/www/rr888bd.site/_node_app/scripts/deploy.sh
 #
 # It pulls main, installs, builds, restarts the app and checks the live site.
 # No root needed: the app is a FASTPANEL "Systemd" backend running as this
@@ -15,9 +15,9 @@
 
 set -uo pipefail
 
-APP_DIR="${APP_DIR:-$HOME/www/sk88bd.com/_node_app}"
+APP_DIR="${APP_DIR:-$HOME/www/rr888bd.site/_node_app}"
 PORT="${PORT:-3251}"
-SITE="${SITE:-https://sk88bd.com}"
+SITE="${SITE:-https://rr888bd.site}"
 BRANCH="${BRANCH:-main}"
 
 CHECK_ONLY=0
@@ -96,13 +96,13 @@ ok "built $(build_id)"
 say "Restarting"
 OLD_PID="$(running_pid)"
 [ -z "$OLD_PID" ] && die "no running app found for user $(id -un).
-   Start it from FASTPANEL: sk88bd.com → Settings → Backend → Save."
+  Start it from FASTPANEL: rr888bd.site → Settings → Backend → Save."
 
 # The unit that owns the process — its own cgroup line names it, and any user
 # may read that.
 #
 # FASTPANEL runs this backend as a *user* unit, so the cgroup reads
-# .../user@1044.service/app.slice/sk88bd_com.service. That one this account
+# .../user@1044.service/app.slice/rr888bd_site.service. That one this account
 # may restart outright, no root and no killing. Only if it turns out to be a
 # system unit instead do we fall back to sudo, and then to a plain signal —
 # and that last one only when the unit will start the app again.
@@ -128,7 +128,7 @@ elif [ -n "$UNIT" ] && { [ "$RESTART_POLICY" = always ] || [ "$RESTART_POLICY" =
 else
   warn "cannot confirm this unit restarts itself, so the app was left running."
   warn "the new build is in place; finish it in FASTPANEL:"
-  warn "  sk88bd.com → Settings → Backend → Save"
+  warn "  rr888bd.site → Settings → Backend → Save"
   exit 0
 fi
 
@@ -140,7 +140,7 @@ for i in $(seq 1 40); do
   if [ "$i" = 40 ]; then
     echo
     die "the app did not come back on port $PORT.
-   Restart it from FASTPANEL: sk88bd.com → Settings → Backend → Save.
+  Restart it from FASTPANEL: rr888bd.site → Settings → Backend → Save.
    The new build is already in place, so a restart is all that is missing."
   fi
 done

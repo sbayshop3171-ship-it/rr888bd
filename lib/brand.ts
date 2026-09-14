@@ -4,16 +4,16 @@
    ============================================================ */
 
 export const BRAND = {
-  name: 'Sk88bd',
+  name: 'rr888bd',
   /** wordmark is split so the two halves can carry different gradients */
   light: 'SK',
   accent: '88BD',
-  /** the second half of the header logo, "SK88BD | wintk" — split so "tk"
+  /** the second half of the header logo, "RR888BD | wintk" — split so "tk"
       can be green, as on the reference (pk44baji) */
   tag: 'win',
   tagAccent: 'tk',
   currency: '৳',
-  domain: 'sk88bd.com',
+  domain: 'rr888bd.site',
   /** Support mailbox shown in the footer and on the support page. The admin
       can override it at /admin/settings; this is the fallback. */
   email: 'tsportscom70@gmail.com',

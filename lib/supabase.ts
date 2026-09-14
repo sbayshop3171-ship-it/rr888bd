@@ -63,7 +63,7 @@ export function mysqlConfigFromEnv() {
   const port = Number(process.env.NEXT_PUBLIC_DB_PORT || process.env.DB_PORT || process.env.MYSQL_PORT || 3306);
   const user = process.env.NEXT_PUBLIC_DB_USER || process.env.DB_USER || process.env.NEXT_PUBLIC_DB_USERNAME || process.env.DB_USERNAME || process.env.MYSQL_USER || 'root';
   const password = process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || '';
-  const database = process.env.NEXT_PUBLIC_DB_NAME || process.env.DB_NAME || process.env.NEXT_PUBLIC_DB_DATABASE || process.env.DB_DATABASE || process.env.MYSQL_DATABASE || 'sk88bd';
+  const database = process.env.NEXT_PUBLIC_DB_NAME || process.env.DB_NAME || process.env.NEXT_PUBLIC_DB_DATABASE || process.env.DB_DATABASE || process.env.MYSQL_DATABASE || 'rr888bd';
   return { host, port, user, password, database };
 }
 
@@ -85,10 +85,10 @@ function apiUrl(path: string) {
 function saveSession(session: Session | null) {
   if (typeof window === 'undefined') return;
   if (!session) {
-    localStorage.removeItem('sk88bd_session');
+    localStorage.removeItem('rr888bd_session');
     return;
   }
-  localStorage.setItem('sk88bd_session', JSON.stringify(session));
+  localStorage.setItem('rr888bd_session', JSON.stringify(session));
   try {
     window.dispatchEvent(new Event('storage'));
   } catch {
@@ -100,7 +100,7 @@ function saveSession(session: Session | null) {
 function readSession(): Session | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem('sk88bd_session');
+    const raw = localStorage.getItem('rr888bd_session');
     return raw ? (JSON.parse(raw) as Session) : null;
   } catch {
     return null;

@@ -1,5 +1,5 @@
 -- ============================================================
--- Sk88bd — database schema
+-- rr888bd — database schema
 --
 -- Apply in the Supabase SQL editor (or `supabase db push`).
 -- Idempotent: safe to re-run. Existing objects are left alone, missing
@@ -299,6 +299,6 @@ insert into payment_channels (id, name, min_amount, max_amount, sort_order) valu
 on conflict (id) do nothing;
 
 insert into settings (key, value) values
-  ('site',    '{"name":"Sk88bd","domain":"sk88bd.live","currency":"BDT"}'::jsonb),
+  ('site',    '{"name":"rr888bd","domain":"rr888bd.site","currency":"BDT"}'::jsonb),
   ('support', '{"email":"mpmony1@gmail.com"}'::jsonb)
 on conflict (key) do nothing;

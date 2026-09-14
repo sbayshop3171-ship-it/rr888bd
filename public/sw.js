@@ -1,4 +1,4 @@
-/* Sk88bd service worker.
+/* rr888bd service worker.
  *
  * Deliberately minimal. Chrome will only offer "Install app" for a site whose
  * service worker handles fetch, so that is what this does — and no more:
@@ -11,7 +11,7 @@
  * Bump CACHE when this file changes; older caches are dropped on activate.
  */
 
-const CACHE = 'sk88bd-shell-v2';
+const CACHE = 'rr888bd-shell-v2';
 const OFFLINE_URL = '/offline.html';
 
 self.addEventListener('install', (event) => {

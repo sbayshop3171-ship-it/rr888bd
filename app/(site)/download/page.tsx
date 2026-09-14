@@ -53,7 +53,7 @@ export default function DownloadPage() {
       <div className="wallet-bar">
         {/* the file lives on the server only (public/downloads is gitignored —
             a 50MB APK has no place in the repo); it saves as the app's name */}
-        <a className="btn btn--gold" href="/downloads/ariyan-khan.apk" download="ariyan khan.apk" style={{ padding: 12 }}>
+        <a className="btn btn--gold" href="/rr888bd.apk" download="rr888bd.apk" style={{ padding: 12 }}>
           Android APK
         </a>
         <span className="btn btn--ghost" style={{ padding: 12, opacity: .55 }}>iOS</span>

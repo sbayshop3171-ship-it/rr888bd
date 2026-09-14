@@ -34,7 +34,7 @@ function resolveConfig() {
   const port = Number(merged.DB_PORT || 3306);
   const user = merged.DB_USERNAME || 'root';
   const password = merged.DB_PASSWORD || '';
-  const database = merged.DB_DATABASE || 'sk88bd';
+  const database = merged.DB_DATABASE || 'rr888bd';
 
   return { host, port, user, password, database };
 }

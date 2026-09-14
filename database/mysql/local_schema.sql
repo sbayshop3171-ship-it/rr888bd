@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS `sk88bd` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `sk88bd`;
+CREATE DATABASE IF NOT EXISTS `rr888bd` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `rr888bd`;
 
 DROP TABLE IF EXISTS `profiles`, `deposits`, `withdrawals`;
 

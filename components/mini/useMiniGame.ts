@@ -17,7 +17,7 @@ import {
   type MiniReason,
 } from '@/lib/mini-games';
 
-const SEED_KEY = 'sk88bd:client-seed';
+const SEED_KEY = 'rr888bd:client-seed';
 
 export const MIN_STAKE = MIN_STAKE_PAISA / 100;
 export const MAX_STAKE = MAX_STAKE_PAISA / 100;

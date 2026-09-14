@@ -37,7 +37,7 @@ export const t = {
 
   // home
   welcome:
-    'Welcome to sk88bd.com — Bangladesh’s #1 cricket exchange and betting platform.',
+    'Welcome to rr888bd.site — Bangladesh’s #1 cricket exchange and betting platform.',
   latestWinners: 'Latest Winners',
   ourPartners: 'Our Partners',
 

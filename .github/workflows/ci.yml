@@ -78,13 +78,55 @@ jobs:
       - name: Run Flutter tests
         run: flutter test
 
-      - name: Build live debug APK
-        run: flutter build apk --debug --dart-define=SIGNAL_API_BASE_URL=https://sk88bd.com
+      - name: Build live APK
+        run: flutter build apk --release --dart-define=SIGNAL_API_BASE_URL=https://rr888bd.site
 
-      - name: Upload live debug APK
+      - name: Rename live APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/rr888bd.apk
+
+      - name: Upload live APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: prime-signal-live-debug-apk
-          path: mobile/signal_app/build/app/outputs/flutter-apk/app-debug.apk
+          name: rr888bd-apk
+          path: mobile/signal_app/build/app/outputs/flutter-apk/rr888bd.apk
           if-no-files-found: error
           retention-days: 7
+
+  deploy-apk:
+    name: Deploy / rr888bd.apk
+    needs: mobile
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_ENABLED: ${{ secrets.APK_DEPLOY_ENABLED }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: rr888bd-apk
+          path: apk
+
+      - name: Configure SSH
+        if: env.DEPLOY_ENABLED == 'true'
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.APK_DEPLOY_SSH_KEY }}
+
+      - name: Upload APK to public root
+        if: env.DEPLOY_ENABLED == 'true'
+        env:
+          SSH_HOST: ${{ secrets.APK_DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.APK_DEPLOY_USER }}
+          SSH_PORT: ${{ secrets.APK_DEPLOY_PORT }}
+        run: |
+          PORT="${SSH_PORT:-22}"
+          DEST="${SSH_USER}@${SSH_HOST}:/var/www/mehedi3/data/www/rr888bd.site/_node_app/public/rr888bd.apk"
+          scp -P "$PORT" -o StrictHostKeyChecking=accept-new apk/rr888bd.apk "$DEST"
+
+      - name: Report skipped server deployment
+        if: env.DEPLOY_ENABLED != 'true'
+        run: echo 'APK artifact is ready; server upload skipped because APK_DEPLOY_ENABLED is not true.'

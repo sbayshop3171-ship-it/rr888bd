@@ -54,13 +54,13 @@ export const CATALOGUE: Record<CategoryKey, Game[]> = {
        drawn by GameArt from the id — deliberately no `thumb`, since the
        artwork for these is ours to make. ---- */
     g('Aviator', 'Spribe', 'hot', '/games/icons/CK44/aviator.webp', 'aviator', undefined, false),
-    g('Crash', 'Sk88bd', 'hot', undefined, 'crash', undefined, false),
-    g('JetX', 'Sk88bd', 'hot', undefined, 'jetx', undefined, false),
-    g('Limbo', 'Sk88bd', 'new', undefined, 'limbo', undefined, false),
-    g('Dice', 'Sk88bd', 'new', undefined, 'dice', undefined, false),
-    g('Plinko', 'Sk88bd', 'new', undefined, 'plinko', undefined, false),
-    g('Coin Flip', 'Sk88bd', 'new', undefined, 'coin-flip', undefined, false),
-    g('Golden Ace', 'Sk88bd', 'new', undefined, 'golden-ace', undefined, false),
+    g('Crash', 'rr888bd', 'hot', undefined, 'crash', undefined, false),
+    g('JetX', 'rr888bd', 'hot', undefined, 'jetx', undefined, false),
+    g('Limbo', 'rr888bd', 'new', undefined, 'limbo', undefined, false),
+    g('Dice', 'rr888bd', 'new', undefined, 'dice', undefined, false),
+    g('Plinko', 'rr888bd', 'new', undefined, 'plinko', undefined, false),
+    g('Coin Flip', 'rr888bd', 'new', undefined, 'coin-flip', undefined, false),
+    g('Golden Ace', 'rr888bd', 'new', undefined, 'golden-ace', undefined, false),
 
     /* ---- The CK44 hot rail, tile for tile (hand-kept).
        Key art lives in public/games/icons/CK44/, converted from the pack the
@@ -213,7 +213,7 @@ export const CATALOGUE: Record<CategoryKey, Game[]> = {
     /* the house's own slot — it runs on our engine (lib/slots.ts) and opens
        at /game/golden-ace, so it leads the rail rather than sitting behind
        tiles that are still waiting on a licence */
-    g('Golden Ace', 'Sk88bd', 'new', undefined, 'golden-ace', undefined, false),
+    g('Golden Ace', 'rr888bd', 'new', undefined, 'golden-ace', undefined, false),
     g('Beer Tycoon', 'JDB', 'hot', '/games/icons/HOT/JDB__Beer-Tycoon.avif', 'beer-tycoon', '817', true),
     g('Apollo Pays', 'Big Time Gaming', 'hot', '/games/icons/HOT/Big-Time-Gaming__Apollo-Pays.avif', 'apollo-pays', '5878', true),
     g('Advent of the Dragon', 'Live22', 'hot', '/games/icons/HOT/Live22__Advent-of-the-Dragon.png', 'advent-of-the-dragon', '12995', false),
@@ -392,13 +392,13 @@ export const CATALOGUE: Record<CategoryKey, Game[]> = {
        `thumb`, since the artwork for these is ours to make. ---- */
     g('Aviator', 'Spribe', 'hot', '/games/icons/CK44/aviator.webp', 'aviator', undefined, false),
     g('Crazy Time', 'Evolution', 'hot', '/games/icons/CK44/crazy-time.webp', 'crazy-time', '22870', false),
-    g('Crash', 'Sk88bd', 'hot', undefined, 'crash', undefined, false),
-    g('JetX', 'Sk88bd', 'hot', undefined, 'jetx', undefined, false),
-    g('Limbo', 'Sk88bd', 'new', undefined, 'limbo', undefined, false),
-    g('Dice', 'Sk88bd', 'new', undefined, 'dice', undefined, false),
-    g('Plinko', 'Sk88bd', 'new', undefined, 'plinko', undefined, false),
-    g('Coin Flip', 'Sk88bd', 'new', undefined, 'coin-flip', undefined, false),
-    g('Golden Ace', 'Sk88bd', 'new', undefined, 'golden-ace', undefined, false),
+    g('Crash', 'rr888bd', 'hot', undefined, 'crash', undefined, false),
+    g('JetX', 'rr888bd', 'hot', undefined, 'jetx', undefined, false),
+    g('Limbo', 'rr888bd', 'new', undefined, 'limbo', undefined, false),
+    g('Dice', 'rr888bd', 'new', undefined, 'dice', undefined, false),
+    g('Plinko', 'rr888bd', 'new', undefined, 'plinko', undefined, false),
+    g('Coin Flip', 'rr888bd', 'new', undefined, 'coin-flip', undefined, false),
+    g('Golden Ace', 'rr888bd', 'new', undefined, 'golden-ace', undefined, false),
     g('3 Charge Buffalo', 'JILI', 'hot', '/games/icons/HOT/JILI__3-Charge-Buffalo.avif', '3-charge-buffalo', '1185', true),
     g('3 Lucky Piggy', 'JILI', 'hot', '/games/icons/HOT/JILI__3-Lucky-Piggy.avif', '3-lucky-piggy', '1026', true),
     g('Crazy Hunter', 'JILI', 'hot', '/games/icons/FISH/JILI__Crazy-Hunter.avif', 'crazy-hunter', '468', true),

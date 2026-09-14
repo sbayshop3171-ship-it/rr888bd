@@ -3,10 +3,10 @@
 GitHub `main` is what goes live. Push there, then run one command.
 
 - **Server**: `5.189.168.13`, FASTPANEL, site user `mehedi3` (no sudo)
-- **App**: `~/www/sk88bd.com/_node_app`, Next.js on `127.0.0.1:3251`
+- **App**: `~/www/rr888bd.site/_node_app`, Next.js on `127.0.0.1:3251`
 - **Process**: a FASTPANEL *Systemd* backend running as `mehedi3`, behind
   nginx → Cloudflare. Killing it is enough to restart it; no root needed.
-- **Shell**: FASTPANEL → `sk88bd.com` → **Terminal** is already a `mehedi3`
+- **Shell**: FASTPANEL → `rr888bd.site` → **Terminal** is already a `mehedi3`
   shell in the browser. https://5.189.168.13:8888
 
 ## Deploy
@@ -14,11 +14,11 @@ GitHub `main` is what goes live. Push there, then run one command.
 In the FASTPANEL terminal (or over SSH as `mehedi3`):
 
 ```bash
-~/www/sk88bd.com/_node_app/scripts/deploy.sh
+~/www/rr888bd.site/_node_app/scripts/deploy.sh
 ```
 
 It pulls `main`, runs `npm ci`, builds, restarts the app, waits for it to
-answer, then confirms sk88bd.com is serving the new build. A failed build
+answer, then confirms rr888bd.site is serving the new build. A failed build
 stops before the restart, so the running site is never left broken.
 
 ```bash
@@ -30,7 +30,7 @@ scripts/deploy.sh --no-restart     # build only
 ### First time (before the script is on the server)
 
 ```bash
-cd ~/www/sk88bd.com/_node_app && git checkout -- . && git pull --ff-only origin main \
+cd ~/www/rr888bd.site/_node_app && git checkout -- . && git pull --ff-only origin main \
   && chmod +x scripts/deploy.sh && scripts/deploy.sh --skip-install
 ```
 
@@ -39,7 +39,7 @@ just the one line above.
 
 ### If the app does not come back
 
-FASTPANEL → `sk88bd.com` → Settings → **Backend** → **Save**. That re-writes
+FASTPANEL → `rr888bd.site` → Settings → **Backend** → **Save**. That re-writes
 the systemd unit and starts it. The build is already in place by then.
 
 ## Server-side config that is not in git
@@ -58,7 +58,7 @@ the systemd unit and starts it. The build is already in place by then.
 ## Rollback
 
 ```bash
-cd ~/www/sk88bd.com/_node_app
+cd ~/www/rr888bd.site/_node_app
 git log --oneline -5
 git checkout <good-commit> && npm ci && npm run build
 pkill -u "$(id -un)" -f next-server

@@ -263,7 +263,7 @@ revoke all on function approve_withdrawal(bigint, text) from public, anon, authe
 -- 3. signup: the phone is the login, nothing else
 -- ============================================================
 -- Every signup comes from the register page, whose login is
--- <11-digit phone>@id.sk88bd.live (sk88bd.local before 2026-09). Anything
+-- <11-digit phone>@id.rr888bd.site (rr888bd.local before 2026-09). Anything
 -- else is refused rather than given a profile with a made-up phone.
 
 create or replace function handle_new_user()
@@ -274,7 +274,7 @@ declare
   meta_agent  text := nullif(upper(trim(new.raw_user_meta_data ->> 'agent_code')), '');
   inviter     uuid;
 begin
-  if coalesce(new.email, '') !~ '^01[0-9]{9}@(id\.sk88bd\.live|sk88bd\.local)$' then
+  if coalesce(new.email, '') !~ '^01[0-9]{9}@(id\.rr888bd\.site|rr888bd\.local)$' then
     raise exception 'signup must use a phone login' using errcode = 'check_violation';
   end if;
 
