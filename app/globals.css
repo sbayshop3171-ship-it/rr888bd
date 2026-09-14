@@ -111,7 +111,7 @@ ul{margin:0;padding:0;list-style:none}
 }
 .icon-btn svg{width:19px;height:19px}
 .logo{display:flex;align-items:baseline;gap:6px;flex:1;min-width:0}
-.logo__image{display:block;width:108px;height:auto;max-width:100%;object-fit:contain}
+.logo__image{display:block;width:136px;height:auto;max-width:100%;object-fit:contain}
 /* Gradient text needs drop-shadow, not text-shadow — the colour is transparent.
    background-clip must come AFTER the `background` shorthand, which resets it. */
 .logo__mark{
@@ -139,13 +139,13 @@ ul{margin:0;padding:0;list-style:none}
 .logo__sub b{color:#27d36b;font-weight:900}
 /* signed out, Log In and Register Now take half a phone's width. */
 @media (max-width:430px){
-  .hdr--guest .logo__image{width:94px}
+  .hdr--guest .logo__image{width:122px}
   .hdr--guest .logo__mark{font-size:17px}
   .hdr--guest .logo__sub{font-size:16px;padding-left:5px}
 }
 @media (max-width:380px){
   .hdr--guest{gap:7px}
-  .hdr--guest .logo__image{width:84px}
+  .hdr--guest .logo__image{width:108px}
   .hdr--guest .logo__mark{font-size:15px}
   .hdr--guest .logo__sub{font-size:14px;padding-left:4px}
   .hdr--guest .hdr__actions .btn{padding-inline:11px;font-size:12px}
