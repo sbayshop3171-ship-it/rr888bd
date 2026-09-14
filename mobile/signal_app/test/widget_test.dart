@@ -29,7 +29,7 @@ void main() {
     await tester.pumpWidget(const PrimeSignalApp());
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('PRIME VAI DEVX'), findsOneWidget);
+    expect(find.text('RR888BD'), findsOneWidget);
     expect(find.text('UNLOCK'), findsOneWidget);
     expect(find.textContaining('awaiting access key'), findsOneWidget);
   });

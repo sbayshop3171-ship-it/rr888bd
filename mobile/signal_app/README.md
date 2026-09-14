@@ -5,7 +5,7 @@ Flutter mobile UI for the demo signal terminal shown in the reference screenshot
 ## Screen Breakdown
 
 - Top game switcher: `[ AVIATOR ]` and `[ CRASH ]`
-- Glowing brand panel: `PRIME VAI DEVX`, terminal subtitle, active mode badge
+- Glowing brand panel: `RR888BD`, terminal subtitle, active mode badge
 - Three stat cards: accuracy, mode, win rate
 - Main circular neon gauge with target multiplier, live clock, and signal status
 - Auto signal bar, recent rounds chips, and Bangla access status pill
@@ -40,7 +40,7 @@ Example response:
 {
   "game": "aviator",
   "branding": {
-    "title": "PRIME VAI DEVX",
+    "title": "RR888BD",
     "subtitle": "ENCRYPTED SIGNAL TERMINAL",
     "modeBadge": "MODE: BASS"
   },
