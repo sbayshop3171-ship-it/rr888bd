@@ -221,7 +221,7 @@ export const CASHIER_DEFAULTS: CashierConfig = {
         bonusPercent: 0,
         color: CHANNEL_COLOR[m.channelId],
         tag: 'RR888BD',
-        min: 300,
+        min: 500,
         max: 30_000,
         trxRequired: true,
         note: '',

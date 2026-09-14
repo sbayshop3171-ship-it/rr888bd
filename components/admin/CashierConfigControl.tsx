@@ -92,7 +92,7 @@ const CHARGE_TEXTS: [keyof CashierConfig['withdraw'], string, boolean][] = [
 
 const blankDeposit = (channelId: string): DepositMethod => ({
   id: '', name: '', channelId, payType: 'transfer', bonusLabel: '', bonusPercent: 0,
-  icon: '💳', color: '#0f766e', channelLabel: '', tag: 'GATEWAY', min: 300, max: 30000, trxRequired: true, note: '', active: true,
+  icon: '💳', color: '#0f766e', channelLabel: '', tag: 'GATEWAY', min: 500, max: 30000, trxRequired: true, note: '', active: true,
 });
 
 const blankWithdraw = (channelId: string): WithdrawMethod => ({

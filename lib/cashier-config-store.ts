@@ -259,6 +259,15 @@ function freshenIcons<T extends { channelId: string; icon: string }>(
   });
 }
 
+function normalizeDepositMinimums<T extends { min: number }>(methods: T[]): T[] {
+  return methods.map((m) => (m.min === 300 ? { ...m, min: 500 } : m));
+}
+
+function normalizeDepositAmounts(amounts: AmountPreset[]): AmountPreset[] {
+  const filtered = amounts.filter((a) => a.amount !== 300);
+  return filtered.length > 0 ? filtered : CASHIER_DEFAULTS.deposit.amounts;
+}
+
 /** Quick-amount chips, before 300 led the row. */
 const LEGACY_QUICK_AMOUNTS: AmountPreset[] = [500, 1000, 2000, 5000, 10000, 25000]
   .map((amount) => ({ amount, bonusLabel: '' }));
@@ -284,13 +293,14 @@ function merge(partial: Partial<CashierConfig>): CashierConfig {
     deposit: {
       ...deposit,
       // a method saved before the channel label existed has none
-      methods: freshenIcons(deposit.methods, CASHIER_DEFAULTS.deposit.methods)
+      methods: normalizeDepositMinimums(freshenIcons(deposit.methods, CASHIER_DEFAULTS.deposit.methods)
         .map((m) => ({ ...m, channelLabel: m.channelLabel ?? '' })),
-      amounts: supersededDefault(
+      ),
+      amounts: normalizeDepositAmounts(supersededDefault(
         deposit.amounts,
         LEGACY_QUICK_AMOUNTS,
         CASHIER_DEFAULTS.deposit.amounts,
-      ),
+      )),
     },
     withdraw: {
       ...withdraw,
