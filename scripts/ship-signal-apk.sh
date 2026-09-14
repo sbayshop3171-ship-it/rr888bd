@@ -12,9 +12,10 @@ cd "$(dirname "$0")/.."
 
 NOTES="${1:-}"
 FORCE="${FORCE:-false}"
-HOST=mehedi3@5.189.168.13
-DIR=www/rr888bd.site/_node_app/public/downloads
-PUBLIC_DIR=www/rr888bd.site/_node_app/public
+HOST=${HOST:-rr888bd@5.189.168.13}
+SITE_ROOT=${SITE_ROOT:-/var/www/rr888bd/data/www/rr888bd.site}
+DIR=$SITE_ROOT/public/downloads
+PUBLIC_DIR=$SITE_ROOT/public
 
 ver=$(grep -m1 '^version:' mobile/signal_app/pubspec.yaml | awk '{print $2}')
 name=${ver%%+*}
@@ -24,8 +25,9 @@ echo "building $name (build $code)"
 (cd mobile/signal_app && ~/flutter/bin/flutter build apk --release \
   --dart-define=SIGNAL_API_BASE_URL=https://rr888bd.site)
 APK=mobile/signal_app/build/app/outputs/flutter-apk/app-release.apk
-size=$(stat -c %s "$APK")
+size=$(stat -f %z "$APK" 2>/dev/null || stat -c %s "$APK")
 
+ssh "$HOST" "install -d '$DIR'"
 rsync -az "$APK" "$HOST:$DIR/ariyan-khan.apk"
 rsync -az "$APK" "$HOST:$PUBLIC_DIR/rr888bd.apk"
 
@@ -45,7 +47,7 @@ echo "offered: $(curl -s https://rr888bd.site/api/signal-terminal/app-version)"
 served=$(curl -sI "https://rr888bd.site/downloads/ariyan-khan.apk?v=$code" | awk 'tolower($1)=="content-length:" {print $2}' | tr -d '\r')
 if [ "$served" != "$size" ]; then
   echo "the site serves $served bytes, the build is $size — restarting so it picks the file up"
-  ssh "$HOST" 'systemctl --user restart rr888bd_site.service'
+  ssh "$HOST" 'systemctl --user restart rr888bd_site.service 2>/dev/null || true'
   sleep 6
   served=$(curl -sI "https://rr888bd.site/downloads/ariyan-khan.apk?v=$code" | awk 'tolower($1)=="content-length:" {print $2}' | tr -d '\r')
 fi

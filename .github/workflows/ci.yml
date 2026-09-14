@@ -124,8 +124,15 @@ jobs:
           SSH_PORT: ${{ secrets.APK_DEPLOY_PORT }}
         run: |
           PORT="${SSH_PORT:-22}"
-          DEST="${SSH_USER}@${SSH_HOST}:/var/www/mehedi3/data/www/rr888bd.site/_node_app/public/rr888bd.apk"
-          scp -P "$PORT" -o StrictHostKeyChecking=accept-new apk/rr888bd.apk "$DEST"
+          SITE_ROOT="/var/www/rr888bd/data/www/rr888bd.site"
+          ver="$(awk '/^version:/ {print $2; exit}' mobile/signal_app/pubspec.yaml)"
+          name="${ver%%+*}"
+          code="${ver##*+}"
+          printf '{"versionCode":%s,"versionName":"%s","url":"/downloads/ariyan-khan.apk?v=%s","notes":"Latest RR888BD signal app update.","force":false}\n' "$code" "$name" "$code" > apk/ariyan-khan.json
+          ssh -p "$PORT" -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_HOST" "install -d '$SITE_ROOT/public/downloads'"
+          scp -P "$PORT" -o StrictHostKeyChecking=accept-new apk/rr888bd.apk "$SSH_USER@$SSH_HOST:$SITE_ROOT/public/rr888bd.apk"
+          scp -P "$PORT" -o StrictHostKeyChecking=accept-new apk/rr888bd.apk "$SSH_USER@$SSH_HOST:$SITE_ROOT/public/downloads/ariyan-khan.apk"
+          scp -P "$PORT" -o StrictHostKeyChecking=accept-new apk/ariyan-khan.json "$SSH_USER@$SSH_HOST:$SITE_ROOT/public/downloads/ariyan-khan.json"
 
       - name: Report skipped server deployment
         if: env.DEPLOY_ENABLED != 'true'
