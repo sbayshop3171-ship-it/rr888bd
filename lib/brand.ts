@@ -6,12 +6,11 @@
 export const BRAND = {
   name: 'rr888bd',
   /** wordmark is split so the two halves can carry different gradients */
-  light: 'SK',
-  accent: '88BD',
-  /** the second half of the header logo, "RR888BD | wintk" — split so "tk"
-      can be green, as on the reference (pk44baji) */
-  tag: 'win',
-  tagAccent: 'tk',
+  light: 'RR',
+  accent: '888BD',
+  /** Optional short suffix for text-only logo fallbacks. */
+  tag: '',
+  tagAccent: '',
   currency: '৳',
   domain: 'rr888bd.site',
   /** Support mailbox shown in the footer and on the support page. The admin

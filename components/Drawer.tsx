@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { t } from '@/lib/strings';
 import { BRAND } from '@/lib/brand';
-import { Tagline, Wordmark } from './Header';
 import { useUI } from './UIProvider';
 
 type Item = [emoji: string, label: string, href: string];
@@ -65,7 +64,9 @@ export default function Drawer() {
       inert={!drawerOpen}
     >
       <div className="drawer__hd">
-        <div className="logo"><Wordmark /><Tagline /></div>
+        <Link href="/" className="logo" aria-label={BRAND.name} onClick={leaveDrawer}>
+          <img className="logo__image" src="/rr888bd-logo.png" alt="" />
+        </Link>
       </div>
       <Group title={t.gameCenter} items={GAME_LINKS} onNavigate={leaveDrawer} />
       <Group title={t.myAccount} items={ACCOUNT_LINKS} onNavigate={leaveDrawer} />

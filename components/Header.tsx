@@ -17,7 +17,7 @@ export function Wordmark() {
   );
 }
 
-/** "wintk" after the wordmark, behind a thin rule. */
+/** Optional suffix for text-only logo fallbacks. */
 export function Tagline() {
   return (
     <span className="logo__sub">
