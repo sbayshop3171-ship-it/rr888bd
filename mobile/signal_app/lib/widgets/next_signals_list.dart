@@ -102,16 +102,16 @@ class _SignalRow extends StatelessWidget {
           vertical: (lead ? 13 : 10) * scale,
         ),
         decoration: BoxDecoration(
-          color: colour.withValues(alpha: lead ? 0.14 : 0.07),
+          color: colour.withOpacity(lead ? 0.14 : 0.07),
           borderRadius: BorderRadius.circular(10 * scale),
           border: Border.all(
-            color: colour.withValues(alpha: lead ? 0.6 : 0.28),
+            color: colour.withOpacity(lead ? 0.6 : 0.28),
             width: lead ? 1.4 : 1,
           ),
           boxShadow: lead
               ? [
                   BoxShadow(
-                    color: colour.withValues(alpha: 0.25),
+                    color: colour.withOpacity(0.25),
                     blurRadius: 16 * scale,
                   ),
                 ]
@@ -139,7 +139,7 @@ class _SignalRow extends StatelessWidget {
                   Text(
                     burstX != null ? 'ফেটে গেছে' : _status(signal, now, revealed),
                     style: TextStyle(
-                      color: NeonPalette.text.withValues(alpha: 0.8),
+                      color: NeonPalette.text.withOpacity(0.8),
                       fontSize: 11 * scale,
                       fontWeight: FontWeight.w700,
                     ),
@@ -182,9 +182,9 @@ class _Position extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: colour.withValues(alpha: 0.18),
+        color: colour.withOpacity(0.18),
         shape: BoxShape.circle,
-        border: Border.all(color: colour.withValues(alpha: 0.5)),
+        border: Border.all(color: colour.withOpacity(0.5)),
       ),
       child: Text(
         '$position',

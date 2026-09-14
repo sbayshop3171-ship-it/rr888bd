@@ -165,9 +165,9 @@ class _ScanGateState extends State<ScanGate> with TickerProviderStateMixin {
                   backgroundColor: NeonPalette.cyan,
                   foregroundColor: NeonPalette.bgDeep,
                   disabledBackgroundColor:
-                      NeonPalette.cyan.withValues(alpha: 0.25),
+                      NeonPalette.cyan.withOpacity(0.25),
                   disabledForegroundColor:
-                      NeonPalette.bgDeep.withValues(alpha: 0.5),
+                      NeonPalette.bgDeep.withOpacity(0.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12 * s),
                   ),
@@ -205,14 +205,14 @@ class _RadarPainter extends CustomPainter {
     final ring = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2
-      ..color = NeonPalette.cyan.withValues(alpha: 0.18);
+      ..color = NeonPalette.cyan.withOpacity(0.18);
     for (final f in [1.0, 0.74, 0.48, 0.22]) {
       canvas.drawCircle(centre, radius * f, ring);
     }
 
     final cross = Paint()
       ..strokeWidth = 1
-      ..color = NeonPalette.cyan.withValues(alpha: 0.12);
+      ..color = NeonPalette.cyan.withOpacity(0.12);
     canvas.drawLine(
       Offset(centre.dx - radius, centre.dy),
       Offset(centre.dx + radius, centre.dy),
@@ -232,7 +232,7 @@ class _RadarPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
-          ..color = NeonPalette.cyan.withValues(alpha: 0.15 + idle * 0.25),
+          ..color = NeonPalette.cyan.withOpacity(0.15 + idle * 0.25),
       );
       return;
     }
@@ -243,8 +243,8 @@ class _RadarPainter extends CustomPainter {
         startAngle: 0,
         endAngle: math.pi / 2,
         colors: [
-          NeonPalette.cyan.withValues(alpha: 0.45),
-          NeonPalette.cyan.withValues(alpha: 0),
+          NeonPalette.cyan.withOpacity(0.45),
+          NeonPalette.cyan.withOpacity(0),
         ],
         transform: GradientRotation(angle),
       ).createShader(Rect.fromCircle(center: centre, radius: radius));
@@ -256,7 +256,7 @@ class _RadarPainter extends CustomPainter {
       centre + Offset(math.cos(angle), math.sin(angle)) * radius,
       Paint()
         ..strokeWidth = 2
-        ..color = NeonPalette.mint.withValues(alpha: 0.9),
+        ..color = NeonPalette.mint.withOpacity(0.9),
     );
 
     // progress arc round the rim

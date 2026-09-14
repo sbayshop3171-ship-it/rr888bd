@@ -154,7 +154,7 @@ class _Waiting extends StatelessWidget {
         Text(
           'সিগন্যাল আসছে…',
           style: TextStyle(
-            color: NeonPalette.text.withValues(alpha: 0.75),
+            color: NeonPalette.text.withOpacity(0.75),
             fontSize: 11 * scale,
             fontWeight: FontWeight.w700,
           ),
@@ -202,9 +202,9 @@ class _Burst extends StatelessWidget {
         Container(
           padding: EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 4 * scale),
           decoration: BoxDecoration(
-            color: NeonPalette.red.withValues(alpha: 0.14),
+            color: NeonPalette.red.withOpacity(0.14),
             borderRadius: BorderRadius.circular(12 * scale),
-            border: Border.all(color: NeonPalette.red.withValues(alpha: 0.5)),
+            border: Border.all(color: NeonPalette.red.withOpacity(0.5)),
           ),
           child: Text(
             'ফেটে গেছে',
@@ -233,9 +233,9 @@ class _FlyCountdown extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12 * scale, vertical: 4 * scale),
       decoration: BoxDecoration(
-        color: NeonPalette.gold.withValues(alpha: 0.14),
+        color: NeonPalette.gold.withOpacity(0.14),
         borderRadius: BorderRadius.circular(12 * scale),
-        border: Border.all(color: NeonPalette.gold.withValues(alpha: 0.5)),
+        border: Border.all(color: NeonPalette.gold.withOpacity(0.5)),
       ),
       child: Text(
         flying ? 'উড়ছে এখনই' : 'এই রাউন্ডে উড়বে',

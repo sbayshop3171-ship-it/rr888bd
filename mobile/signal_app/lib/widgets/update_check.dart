@@ -115,7 +115,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         insetPadding: const EdgeInsets.symmetric(horizontal: 26),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: NeonPalette.cyan.withValues(alpha: 0.45)),
+          side: BorderSide(color: NeonPalette.cyan.withOpacity(0.45)),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
@@ -141,7 +141,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                 Text(
                   u.notes,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: NeonPalette.text.withValues(alpha: 0.8), fontSize: 13, height: 1.45),
+                  style: TextStyle(color: NeonPalette.text.withOpacity(0.8), fontSize: 13, height: 1.45),
                 ),
               ],
               const SizedBox(height: 16),
@@ -151,7 +151,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
                   child: LinearProgressIndicator(
                     value: _progress > 0 ? _progress : null,
                     minHeight: 8,
-                    backgroundColor: NeonPalette.cyan.withValues(alpha: 0.12),
+                    backgroundColor: NeonPalette.cyan.withOpacity(0.12),
                     color: NeonPalette.mint,
                   ),
                 ),
