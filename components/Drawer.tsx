@@ -65,7 +65,7 @@ export default function Drawer() {
     >
       <div className="drawer__hd">
         <Link href="/" className="logo" aria-label={BRAND.name} onClick={leaveDrawer}>
-          <img className="logo__image" src="/rr888bd-logo.png" alt="" />
+          <img className="logo__image" src="/rr888bd-logo.png?v=main-logo-20260914" alt="" />
         </Link>
       </div>
       <Group title={t.gameCenter} items={GAME_LINKS} onNavigate={leaveDrawer} />
