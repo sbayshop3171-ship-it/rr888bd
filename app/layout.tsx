@@ -7,6 +7,7 @@ const TITLE = `${BRAND.name} — Online Casino & Cricket Exchange`;
 const DESCRIPTION =
   'Bangladesh’s online gaming platform — live casino, slots, cricket exchange, fishing and lottery.';
 const SOCIAL_IMAGE = '/social-preview.jpg?v=rr888bd-social-20260914';
+const APP_ICON_VERSION = 'apps-logo-20260914-favicon';
 
 export const metadata: Metadata = {
   // Facebook, Messenger and WhatsApp need an absolute og:image URL; without
@@ -27,10 +28,10 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
-      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: `/icons/favicon-32.png?v=${APP_ICON_VERSION}`, sizes: '32x32', type: 'image/png' },
+      { url: `/icons/icon-192.png?v=${APP_ICON_VERSION}`, sizes: '192x192', type: 'image/png' },
     ],
-    apple: '/icons/apple-touch-icon.png',
+    apple: `/icons/apple-touch-icon.png?v=${APP_ICON_VERSION}`,
   },
   // lets iOS run it full-screen once it is on the home screen
   appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: 'black-translucent' },
