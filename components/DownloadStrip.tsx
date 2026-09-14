@@ -12,7 +12,7 @@ export default function DownloadStrip() {
   return (
     <div className="appbar">
       <div className="appbar__logo" aria-hidden>
-        <img src="/download-app-icon.png" alt="" />
+        <img src="/download-app-icon.png?v=apps-logo-20260914" alt="" />
       </div>
       <div className="appbar__txt">
         <div className="appbar__title">{t.downloadBonus} &gt;&gt;&gt;</div>
