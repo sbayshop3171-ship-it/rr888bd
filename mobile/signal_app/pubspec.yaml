@@ -3,7 +3,7 @@ description: Demo Aviator signal terminal UI with API-ready dynamic bindings.
 publish_to: "none"
 # The build number (after +) is what the in-app updater compares — raise it
 # for every APK that goes out. scripts/ship-signal-apk.sh reads it from here.
-version: 0.2.4+6
+version: 0.2.5+7
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
