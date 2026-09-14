@@ -6,6 +6,7 @@ import './globals.css';
 const TITLE = `${BRAND.name} — Online Casino & Cricket Exchange`;
 const DESCRIPTION =
   'Bangladesh’s online gaming platform — live casino, slots, cricket exchange, fishing and lottery.';
+const SOCIAL_IMAGE = '/social-preview.jpg?v=rr888bd-social-20260914';
 
 export const metadata: Metadata = {
   // Facebook, Messenger and WhatsApp need an absolute og:image URL; without
@@ -19,8 +20,9 @@ export const metadata: Metadata = {
     siteName: BRAND.name,
     title: TITLE,
     description: DESCRIPTION,
+    images: [{ url: SOCIAL_IMAGE, width: 1254, height: 1254, alt: TITLE }],
   },
-  twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION },
+  twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION, images: [SOCIAL_IMAGE] },
   applicationName: BRAND.name,
   manifest: '/manifest.webmanifest',
   icons: {

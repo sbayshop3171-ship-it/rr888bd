@@ -99,7 +99,7 @@ export default function InstallPrompt() {
 
         <div className="pwa__head">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="pwa__icon" src="/icons/icon-192.png?v=rr888bd-app-icon" alt="" width={56} height={56} />
+          <img className="pwa__icon" src="/pop-logo.jpg?v=rr888bd-popup-logo" alt="" width={56} height={56} />
           <div>
             <h2 className="pwa__title" id="pwa-title">{BRAND.name} App</h2>
             <p className="pwa__sub">Add it to your phone’s home screen</p>
