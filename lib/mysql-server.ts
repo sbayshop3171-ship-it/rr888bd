@@ -72,6 +72,7 @@ export async function ensureMysqlSchema() {
 
   try {
     await root.query(`CREATE DATABASE IF NOT EXISTS \`${config.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+    await root.query(`ALTER DATABASE \`${config.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
     const pool = await getMysqlPool();
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (

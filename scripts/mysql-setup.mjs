@@ -69,6 +69,7 @@ async function main() {
 
   try {
     await rootConn.query(`CREATE DATABASE IF NOT EXISTS \`${config.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
+    await rootConn.query(`ALTER DATABASE \`${config.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
     await rootConn.query(`USE \`${config.database}\`;`);
 
     const sql = fs.readFileSync(sqlPath, 'utf8');
