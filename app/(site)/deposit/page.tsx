@@ -30,6 +30,22 @@ type Step = 'pick' | 'pay' | 'done';
     have typed either, so match both rather than the language of the day. */
 const PICK_MENU_STEPS = ['Pick the menu above', 'উপরের মেনু বেছে নিন'];
 
+const ACCOUNT_KIND_PAY_TYPE: Record<PublicDepositAccount['kind'], Exclude<DepositMethod['payType'], 'transfer'>> = {
+  personal: 'sendmoney',
+  agent: 'cashout',
+  merchant: 'payment',
+};
+
+const PAY_TYPE_ACTION: Record<Exclude<DepositMethod['payType'], 'transfer'>, string> = {
+  sendmoney: 'SEND MONEY',
+  cashout: 'CASH OUT',
+  payment: 'PAYMENT',
+};
+
+function gatewayName(name: string) {
+  return name.replace(/\s+(SEND MONEY|CASH OUT|PAYMENT)$/i, '').trim() || name;
+}
+
 /** Three screens, like the cashiers players already know: pick a method and
     an amount → pay into the number shown and type the TrxID → done. Every
     label, method and amount comes from the admin's cashier design. */
@@ -239,7 +255,12 @@ export default function DepositPage() {
 
   /* ---------------- step 2: pay ---------------- */
   if (step === 'pay') {
-    const payLabel = PAY_TYPE_LABEL[method.payType];
+    const accountPayType = account ? ACCOUNT_KIND_PAY_TYPE[account.kind] : null;
+    const payType = accountPayType ?? method.payType;
+    const payLabel = PAY_TYPE_LABEL[payType];
+    const gatewayTitle = accountPayType
+      ? `${gatewayName(method.name)} ${PAY_TYPE_ACTION[accountPayType]}`
+      : method.name;
     const steps = cfg.howToSteps.split('\n').map((s) => s.trim()).filter(Boolean);
     return (
       <>
@@ -256,7 +277,7 @@ export default function DepositPage() {
 
           <div className="cz-gate" style={{ background: method.color }}>
             <MethodIcon method={method} size={40} />
-            <b>{method.name}</b>
+            <b>{gatewayTitle}</b>
           </div>
 
           <div className="cz-label">{cfg.walletLabel}<span>*</span></div>
@@ -288,7 +309,7 @@ export default function DepositPage() {
                 <>
                   <div className="cz-how__tiles">
                     {HOWTO_TILES.map((tile) => (
-                      <span key={tile.key} className={`cz-how__tile${tile.key === method.payType ? ' on' : ''}`}>
+                      <span key={tile.key} className={`cz-how__tile${tile.key === payType ? ' on' : ''}`}>
                         <i aria-hidden>{tile.glyph}</i>
                         <small>{tile.label}</small>
                       </span>
