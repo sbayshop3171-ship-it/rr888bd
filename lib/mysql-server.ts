@@ -12,8 +12,10 @@ export interface MysqlConfig {
 
 const MYSQL_COLLATION = 'utf8mb4_unicode_ci';
 const MYSQL_POOL_KEY = '__rr888bd_mysql_server_pool__';
+const MYSQL_COLLATION_READY_KEY = '__rr888bd_mysql_collation_ready__';
 const globalForPool = globalThis as typeof globalThis & {
   [MYSQL_POOL_KEY]?: Awaited<ReturnType<typeof mysql.createPool>> & { __pk?: string };
+  [MYSQL_COLLATION_READY_KEY]?: Promise<void>;
 };
 
 export function resolveMysqlConfig(): MysqlConfig {
@@ -265,6 +267,27 @@ export async function ensureMysqlSchema() {
     await ensureColumn('withdrawals', 'reviewed_at', 'TIMESTAMP', 'NULL', true);
     await ensureColumn('withdrawals', 'trx_id', 'VARCHAR(255)', 'NULL', true);
 
+    if (!globalForPool[MYSQL_COLLATION_READY_KEY]) {
+      globalForPool[MYSQL_COLLATION_READY_KEY] = (async () => {
+        const [tables] = await root.query(
+          `SELECT TABLE_NAME
+           FROM information_schema.TABLES
+           WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE'`,
+          [config.database],
+        );
+        for (const row of tables as { TABLE_NAME: string }[]) {
+          const tableName = row.TABLE_NAME.replace(/`/g, '``');
+          await root.query(
+            `ALTER TABLE \`${tableName}\` CONVERT TO CHARACTER SET utf8mb4 COLLATE ${MYSQL_COLLATION}`,
+          );
+        }
+      })().catch((error) => {
+        globalForPool[MYSQL_COLLATION_READY_KEY] = undefined;
+        throw error;
+      });
+    }
+    await globalForPool[MYSQL_COLLATION_READY_KEY];
+
   } finally {
     await root.end();
   }
@@ -279,7 +302,12 @@ export async function registerUser({ phone, password, referralCode, agentCode }:
   await ensureMysqlSchema();
   const pool = await getMysqlPool();
   const normalizedPhone = phone.trim();
-  const [[existing]]: any = await pool.query('SELECT id FROM users WHERE phone = ? LIMIT 1', [normalizedPhone]);
+  const [[existing]]: any = await pool.query(
+    `SELECT id FROM users
+     WHERE phone COLLATE ${MYSQL_COLLATION} = CONVERT(? USING utf8mb4) COLLATE ${MYSQL_COLLATION}
+     LIMIT 1`,
+    [normalizedPhone],
+  );
   if (existing) {
     throw new Error('An account already exists for this number');
   }
@@ -311,7 +339,12 @@ export async function registerUser({ phone, password, referralCode, agentCode }:
 async function createReferralCode(pool: Awaited<ReturnType<typeof mysql.createPool>>): Promise<string> {
   for (;;) {
     const code = randomBytes(4).toString('hex');
-    const [rows]: any = await pool.query('SELECT id FROM users WHERE referral_code = ? LIMIT 1', [code]);
+    const [rows]: any = await pool.query(
+      `SELECT id FROM users
+       WHERE referral_code COLLATE ${MYSQL_COLLATION} = CONVERT(? USING utf8mb4) COLLATE ${MYSQL_COLLATION}
+       LIMIT 1`,
+      [code],
+    );
     if (!rows.length) return code;
   }
 }
@@ -320,7 +353,12 @@ export async function loginUser({ phone, password }: { phone: string; password: 
   await ensureMysqlSchema();
   const pool = await getMysqlPool();
   const normalizedPhone = phone.trim();
-  const [rows]: any = await pool.query('SELECT id, password_hash FROM users WHERE phone = ? LIMIT 1', [normalizedPhone]);
+  const [rows]: any = await pool.query(
+    `SELECT id, password_hash FROM users
+     WHERE phone COLLATE ${MYSQL_COLLATION} = CONVERT(? USING utf8mb4) COLLATE ${MYSQL_COLLATION}
+     LIMIT 1`,
+    [normalizedPhone],
+  );
   if (!rows.length) throw new Error('Wrong number or password');
   const ok = await bcrypt.compare(password, rows[0].password_hash);
   if (!ok) throw new Error('Wrong number or password');
