@@ -59,6 +59,7 @@ export async function ensureMysqlSchema() {
     port: config.port,
     user: config.user,
     password: config.password,
+    database: config.database,
     charset: MYSQL_COLLATION,
   });
 

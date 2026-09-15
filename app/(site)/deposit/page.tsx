@@ -192,7 +192,7 @@ export default function DepositPage() {
         if (/txn used|duplicate/i.test(message)) setErr('এই TrxID আগেই ব্যবহার করা হয়েছে — একই TrxID দুইবার দেওয়া যায় না');
         else if (/txn format|trxid/i.test(message)) setErr('TrxID সঠিক নয় — মেসেজ থেকে পুরো TrxID দেখে লিখুন');
         else if (/too many pending/i.test(message)) setErr('আপনার ৩টি ডিপোজিট অপেক্ষায় আছে — আগে সেগুলো শেষ হোক');
-        else setErr('Could not send the request — try again');
+        else setErr(message || 'Could not send the request — try again');
         return;
       }
 
