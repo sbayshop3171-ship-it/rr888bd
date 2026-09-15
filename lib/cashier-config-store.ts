@@ -268,6 +268,13 @@ function normalizeDepositAmounts(amounts: AmountPreset[]): AmountPreset[] {
   return filtered.length > 0 ? filtered : CASHIER_DEFAULTS.deposit.amounts;
 }
 
+function ensureRocketDepositMethod(methods: DepositMethod[]): DepositMethod[] {
+  const rocket = methods.find((method) => method.channelId === 'rocket');
+  if (rocket) return methods.map((method) => method === rocket ? { ...method, active: true } : method);
+  const defaultRocket = CASHIER_DEFAULTS.deposit.methods.find((method) => method.channelId === 'rocket');
+  return defaultRocket ? [...methods, defaultRocket] : methods;
+}
+
 /** Quick-amount chips, before 300 led the row. */
 const LEGACY_QUICK_AMOUNTS: AmountPreset[] = [500, 1000, 2000, 5000, 10000, 25000]
   .map((amount) => ({ amount, bonusLabel: '' }));
@@ -293,8 +300,8 @@ function merge(partial: Partial<CashierConfig>): CashierConfig {
     deposit: {
       ...deposit,
       // a method saved before the channel label existed has none
-      methods: normalizeDepositMinimums(freshenIcons(deposit.methods, CASHIER_DEFAULTS.deposit.methods)
-        .map((m) => ({ ...m, channelLabel: m.channelLabel ?? '' })),
+      methods: ensureRocketDepositMethod(normalizeDepositMinimums(freshenIcons(deposit.methods, CASHIER_DEFAULTS.deposit.methods)
+        .map((m) => ({ ...m, channelLabel: m.channelLabel ?? '' }))),
       ),
       amounts: normalizeDepositAmounts(supersededDefault(
         deposit.amounts,

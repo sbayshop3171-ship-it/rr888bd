@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'node:crypto';
 
 export interface MysqlConfig {
   host: string;
@@ -129,6 +130,7 @@ export async function ensureMysqlSchema() {
         is_held TINYINT(1) NOT NULL DEFAULT 0,
         hold_reason VARCHAR(255) DEFAULT NULL,
         block_reason VARCHAR(255) DEFAULT NULL,
+        verification_deposit_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
         withdraw_locked TINYINT(1) NOT NULL DEFAULT 0,
         lock_reason VARCHAR(255) DEFAULT NULL,
         locked_at TIMESTAMP NULL DEFAULT NULL,
@@ -160,6 +162,7 @@ export async function ensureMysqlSchema() {
         admin_note TEXT DEFAULT NULL,
         sender_no VARCHAR(30) DEFAULT NULL,
         txn_id VARCHAR(255) DEFAULT NULL,
+        method_id VARCHAR(100) DEFAULT NULL,
         reviewed_at TIMESTAMP NULL DEFAULT NULL,
         method VARCHAR(100) DEFAULT 'bkash',
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -205,11 +208,18 @@ export async function ensureMysqlSchema() {
     await ensureColumn('profiles', 'vip_level', 'INT', '0', false);
     await ensureColumn('profiles', 'referral_code', 'VARCHAR(32)', 'NULL', true);
     await ensureColumn('profiles', 'agent_code', 'VARCHAR(32)', 'NULL', true);
+    await ensureColumn('profiles', 'real_name', 'VARCHAR(120)', 'NULL', true);
+    await ensureColumn('profiles', 'facebook_id', 'VARCHAR(255)', 'NULL', true);
+    await ensureColumn('profiles', 'google_id', 'VARCHAR(255)', 'NULL', true);
+    await ensureColumn('profiles', 'whatsapp', 'VARCHAR(30)', 'NULL', true);
+    await ensureColumn('profiles', 'email', 'VARCHAR(255)', 'NULL', true);
+    await ensureColumn('profiles', 'contact_phone', 'VARCHAR(15)', 'NULL', true);
     await ensureColumn('profiles', 'player_no', 'BIGINT UNSIGNED', 'NULL', true);
     await ensureColumn('profiles', 'is_blocked', 'TINYINT(1)', '0', false);
     await ensureColumn('profiles', 'is_held', 'TINYINT(1)', '0', false);
     await ensureColumn('profiles', 'hold_reason', 'VARCHAR(255)', 'NULL', true);
     await ensureColumn('profiles', 'block_reason', 'VARCHAR(255)', 'NULL', true);
+    await ensureColumn('profiles', 'verification_deposit_amount', 'DECIMAL(15,2)', '0.00', false);
     await ensureColumn('profiles', 'withdraw_locked', 'TINYINT(1)', '0', false);
     await ensureColumn('profiles', 'lock_reason', 'VARCHAR(255)', 'NULL', true);
     await ensureColumn('profiles', 'locked_at', 'TIMESTAMP', 'NULL', true);
@@ -218,11 +228,27 @@ export async function ensureMysqlSchema() {
     await ensureColumn('profiles', 'turnover_need', 'DECIMAL(15,2)', '0.00', false);
     await ensureColumn('profiles', 'turnover_done', 'DECIMAL(15,2)', '0.00', false);
 
+    const [missingProfiles]: any = await pool.query(`
+      SELECT u.id, u.referral_code
+      FROM users u
+      LEFT JOIN profiles p ON p.id = CAST(u.id AS CHAR)
+      WHERE p.id IS NULL OR p.referral_code IS NULL OR p.referral_code = ''
+    `);
+    for (const user of missingProfiles as { id: number; referral_code: string | null }[]) {
+      const code = user.referral_code || await createReferralCode(pool);
+      await pool.execute('UPDATE users SET referral_code = ? WHERE id = ?', [code, user.id]);
+      await pool.execute(
+        'UPDATE profiles SET referral_code = ? WHERE id = CAST(? AS CHAR)',
+        [code, user.id],
+      );
+    }
+
     await ensureColumn('deposits', 'channel_id', 'VARCHAR(64)', 'NULL', true);
     await ensureColumn('deposits', 'state', "ENUM('pending','approved','rejected','cancelled')", "'pending'", false);
     await ensureColumn('deposits', 'admin_note', 'TEXT', 'NULL', true);
     await ensureColumn('deposits', 'sender_no', 'VARCHAR(30)', 'NULL', true);
     await ensureColumn('deposits', 'txn_id', 'VARCHAR(255)', 'NULL', true);
+    await ensureColumn('deposits', 'method_id', 'VARCHAR(100)', 'NULL', true);
     await ensureColumn('deposits', 'reviewed_at', 'TIMESTAMP', 'NULL', true);
 
     await ensureColumn('withdrawals', 'channel_id', 'VARCHAR(64)', 'NULL', true);
@@ -257,25 +283,35 @@ export async function registerUser({ phone, password, referralCode, agentCode }:
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const referralCodeForUser = await createReferralCode(pool);
   const [result]: any = await pool.execute(
     'INSERT INTO users (phone, password_hash, role, vip_level, referral_code, agent_code) VALUES (?, ?, ?, ?, ?, ?)',
-    [normalizedPhone, passwordHash, 'player', 0, referralCode || null, agentCode || null],
+    [normalizedPhone, passwordHash, 'player', 0, referralCodeForUser, agentCode || null],
   );
   const userId = Number(result.insertId);
   const profileId = String(userId);
   await pool.execute(
-    `INSERT INTO profiles (id, user_id, username, phone, balance, vip_level, avatar_url)
-     VALUES (?, ?, ?, ?, 0.00, 0, NULL)
+    `INSERT INTO profiles (id, user_id, username, phone, balance, vip_level, referral_code, avatar_url)
+     VALUES (?, ?, ?, ?, 0.00, 0, ?, NULL)
      ON DUPLICATE KEY UPDATE
        user_id = VALUES(user_id),
        username = VALUES(username),
        phone = VALUES(phone),
        vip_level = VALUES(vip_level),
+       referral_code = VALUES(referral_code),
        updated_at = CURRENT_TIMESTAMP`,
-    [profileId, profileId, normalizedPhone, normalizedPhone],
+    [profileId, profileId, normalizedPhone, normalizedPhone, referralCodeForUser],
   );
   await pool.execute('INSERT INTO wallets (user_id, balance, bonus_balance, turnover_need, turnover_done) VALUES (?, 0, 0, 0, 0)', [userId]);
   return { id: String(userId), phone: normalizedPhone };
+}
+
+async function createReferralCode(pool: Awaited<ReturnType<typeof mysql.createPool>>): Promise<string> {
+  for (;;) {
+    const code = randomBytes(4).toString('hex');
+    const [rows]: any = await pool.query('SELECT id FROM users WHERE referral_code = ? LIMIT 1', [code]);
+    if (!rows.length) return code;
+  }
 }
 
 export async function loginUser({ phone, password }: { phone: string; password: string }) {

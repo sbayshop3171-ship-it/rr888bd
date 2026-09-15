@@ -210,6 +210,7 @@ const CK_METHODS: { id: string; name: string; channelId: string; payType: PayTyp
   { id: 'nagad', name: 'NAGAD SEND MONEY', channelId: 'nagad', payType: 'sendmoney', channelLabel: 'Nagad Send Money', icon: '/payments/nagad-send.png' },
   { id: 'nagad-fast', name: 'NAGAD FAST PAYMENT', channelId: 'nagad', payType: 'payment', channelLabel: 'Nagad Fast', icon: '/payments/nagad-vip.png' },
   { id: 'bkash', name: 'BKASH VIP CASH OUT', channelId: 'bkash', payType: 'cashout', channelLabel: 'Bkash VIP', icon: '/payments/bkash-vip.png' },
+  { id: 'rocket', name: 'ROCKET CASH OUT', channelId: 'rocket', payType: 'cashout', channelLabel: 'Rocket', icon: CHANNEL_ICON.rocket },
 ];
 
 export const CASHIER_DEFAULTS: CashierConfig = {
@@ -228,7 +229,7 @@ export const CASHIER_DEFAULTS: CashierConfig = {
         active: true,
       })),
       // the other channels stay on the list, switched off, for the admin to bring back
-      ...DEPOSIT_CHANNELS.filter((c) => c.id !== 'bkash' && c.id !== 'nagad').map((c) => ({
+      ...DEPOSIT_CHANNELS.filter((c) => c.id !== 'bkash' && c.id !== 'nagad' && c.id !== 'rocket').map((c) => ({
         id: c.id,
         name: c.name.toUpperCase(),
         channelId: c.id,

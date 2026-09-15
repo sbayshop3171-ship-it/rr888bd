@@ -296,9 +296,13 @@ export function browserClient(): SupabaseClient | null {
     },
     async rpc<T = unknown>(fn: string, args?: Record<string, unknown>) {
       try {
+        const headers: Record<string, string> = { 'content-type': 'application/json' };
+        if (typeof window === 'undefined' && process.env.ADMIN_PASSWORD) {
+          headers['x-internal-rpc-key'] = process.env.ADMIN_PASSWORD;
+        }
         const res = await fetch(apiUrl('/api/db/rpc'), {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers,
           body: JSON.stringify({ fn, args: args ?? {} }),
         });
         const json = await res.json();

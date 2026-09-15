@@ -87,14 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .select('balance, bonus_balance, turnover_need, turnover_done')
       .eq('user_id', uid).maybeSingle();
     let row: Profile | null = null;
-    try {
-      for (const cols of TIERS) {
+    for (const cols of TIERS) {
+      try {
         const p = await supabase.from('profiles').select(cols).eq('id', uid).maybeSingle();
         if (!p.error) { row = (p.data as Profile | null) ?? null; break; }
+      } catch {
+        // Try the next compatibility tier when an older database lacks columns.
       }
-    } catch (error) {
-      console.warn('Profile hydration failed, falling back to a default profile state:', error);
-      row = null;
     }
 
     if (!row) {

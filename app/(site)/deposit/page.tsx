@@ -156,38 +156,38 @@ export default function DepositPage() {
       return;
     }
 
-    // The player raises the request; RLS only lets them insert their own row.
-    // An admin approves it at /admin/deposits, and only then does the money
-    // reach the wallet — with the method's bonus, which the server works out
-    // from the cashier config at approval. The browser names the method and
-    // nothing more (since 012 it cannot write the bonus column at all). The
-    // method column arrives with migration 005; before it the row goes without.
     setBusy(true);
-    const row = {
-      user_id: session.user.id,
-      channel_id: method.channelId,
-      amount: toPaisa(n),
-      sender_no: null,
-      txn_id: trxClean || null,
-    };
-    let { error } = await supabase.from('deposits').insert({ ...row, method_id: method.id });
-    if (error && /column|schema cache/i.test(error.message)) {
-      ({ error } = await supabase.from('deposits').insert(row));
-    }
-    setBusy(false);
+    try {
+      const response = await fetch('/api/deposit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          user_id: session.user.id,
+          amount: toPaisa(n),
+          gateway: method.channelId,
+          method_id: method.id,
+          trxid: trxClean,
+          sender_number: null,
+        }),
+      });
+      const data = await response.json() as { ok?: boolean; message?: string; reason?: string };
+      if (!response.ok || !data.ok) {
+        const message = data.message ?? data.reason ?? '';
+        if (/txn used|duplicate/i.test(message)) setErr('এই TrxID আগেই ব্যবহার করা হয়েছে — একই TrxID দুইবার দেওয়া যায় না');
+        else if (/txn format|trxid/i.test(message)) setErr('TrxID সঠিক নয় — মেসেজ থেকে পুরো TrxID দেখে লিখুন');
+        else if (/too many pending/i.test(message)) setErr('আপনার ৩টি ডিপোজিট অপেক্ষায় আছে — আগে সেগুলো শেষ হোক');
+        else setErr('Could not send the request — try again');
+        return;
+      }
 
-    if (error) {
-      // the database's own answers (migration 015), in the player's words
-      const m = error.message;
-      if (/txn used/i.test(m)) setErr('এই TrxID আগেই ব্যবহার করা হয়েছে — একই TrxID দুইবার দেওয়া যায় না');
-      else if (/txn format/i.test(m)) setErr('TrxID সঠিক নয় — মেসেজ থেকে পুরো TrxID দেখে লিখুন');
-      else if (/too many pending/i.test(m)) setErr('আপনার ৩টি ডিপোজিট অপেক্ষায় আছে — আগে সেগুলো শেষ হোক');
-      else setErr('Could not send the request — try again');
-      return;
+      setStep('done');
+      window.scrollTo({ top: 0 });
+      void refresh().catch(() => undefined);
+    } catch {
+      setErr('Could not reach the server — try again');
+    } finally {
+      setBusy(false);
     }
-    await refresh();
-    setStep('done');
-    window.scrollTo({ top: 0 });
   };
 
   const resubmit = () => {
