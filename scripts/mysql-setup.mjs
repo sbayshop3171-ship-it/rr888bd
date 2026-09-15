@@ -63,7 +63,7 @@ async function main() {
     port: config.port,
     user: config.user,
     password: config.password,
-    charset: 'utf8mb4',
+    charset: 'utf8mb4_unicode_ci',
     multipleStatements: true,
   });
 

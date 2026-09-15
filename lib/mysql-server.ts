@@ -10,6 +10,7 @@ export interface MysqlConfig {
   database: string;
 }
 
+const MYSQL_COLLATION = 'utf8mb4_unicode_ci';
 const MYSQL_POOL_KEY = '__rr888bd_mysql_server_pool__';
 const globalForPool = globalThis as typeof globalThis & {
   [MYSQL_POOL_KEY]?: Awaited<ReturnType<typeof mysql.createPool>> & { __pk?: string };
@@ -36,7 +37,7 @@ export async function getMysqlPool() {
     user: config.user,
     password: config.password,
     database: config.database,
-    charset: 'utf8mb4',
+    charset: MYSQL_COLLATION,
     waitForConnections: true,
     connectionLimit: 50,
     queueLimit: 0,
@@ -56,7 +57,7 @@ export async function ensureMysqlSchema() {
     port: config.port,
     user: config.user,
     password: config.password,
-    charset: 'utf8mb4',
+    charset: MYSQL_COLLATION,
   });
 
   const ensureColumn = async (table: string, name: string, type: string, defaultValue?: string | null, nullable = true) => {
@@ -96,7 +97,7 @@ export async function ensureMysqlSchema() {
         PRIMARY KEY (id),
         UNIQUE KEY uq_users_phone (phone),
         UNIQUE KEY uq_users_player_no (player_no)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
     await pool.query(`
@@ -111,7 +112,7 @@ export async function ensureMysqlSchema() {
         PRIMARY KEY (id),
         UNIQUE KEY uq_wallets_user (user_id),
         CONSTRAINT fk_wallets_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
     await pool.query(`
@@ -148,7 +149,7 @@ export async function ensureMysqlSchema() {
         KEY idx_profiles_phone (phone),
         KEY idx_profiles_agent_code (agent_code),
         KEY idx_profiles_locked (withdraw_locked, locked_at)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
     await pool.query(`
@@ -172,7 +173,7 @@ export async function ensureMysqlSchema() {
         KEY idx_deposits_state (state),
         KEY idx_deposits_status (status),
         KEY idx_deposits_reviewed (reviewed_at)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
     await pool.query(`
@@ -200,7 +201,7 @@ export async function ensureMysqlSchema() {
         KEY idx_withdrawals_state (state),
         KEY idx_withdrawals_status (status),
         KEY idx_withdrawals_reviewed (reviewed_at)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
     await ensureColumn('profiles', 'display_name', 'VARCHAR(120)', 'NULL', true);
@@ -231,14 +232,14 @@ export async function ensureMysqlSchema() {
     const [missingProfiles]: any = await pool.query(`
       SELECT u.id, u.referral_code
       FROM users u
-      LEFT JOIN profiles p ON p.id = CAST(u.id AS CHAR)
+      LEFT JOIN profiles p ON CAST(p.id AS UNSIGNED) = u.id
       WHERE p.id IS NULL OR p.referral_code IS NULL OR p.referral_code = ''
     `);
     for (const user of missingProfiles as { id: number; referral_code: string | null }[]) {
       const code = user.referral_code || await createReferralCode(pool);
       await pool.execute('UPDATE users SET referral_code = ? WHERE id = ?', [code, user.id]);
       await pool.execute(
-        'UPDATE profiles SET referral_code = ? WHERE id = CAST(? AS CHAR)',
+        'UPDATE profiles SET referral_code = ? WHERE CAST(id AS UNSIGNED) = ?',
         [code, user.id],
       );
     }

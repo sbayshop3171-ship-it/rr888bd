@@ -50,7 +50,7 @@ export async function getMysqlPool() {
     queueLimit: 0,
     maxIdle: 20,
     idleTimeout: 60000,
-    charset: 'utf8mb4',
+    charset: 'utf8mb4_unicode_ci',
   });
 
   (pool as typeof pool & { __pk?: string }).__pk = poolKey;
