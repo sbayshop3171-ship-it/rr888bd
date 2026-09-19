@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { registerUser } from '@/lib/mysql-server';
 
 export const runtime = 'nodejs';
@@ -18,6 +19,15 @@ export async function POST(req: Request) {
       password,
       referralCode: body.referralCode || null,
       agentCode: body.agentCode || null,
+    });
+
+    const session = encodeURIComponent(JSON.stringify({ user: { id: user.id } }));
+    (await cookies()).set('rr888bd_session', session, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
     });
 
     return NextResponse.json({ ok: true, user });

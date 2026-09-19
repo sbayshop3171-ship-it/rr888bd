@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toTaka } from '@/lib/auth';
 import { money } from '@/lib/brand';
 import type { CashierRow, RequestState } from '@/lib/cashier';
@@ -40,6 +40,7 @@ export default function CashierControl({
   const [rows, setRows] = useState(initialRows);
   const [state, setState] = useState<RequestState | 'all'>('pending');
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const [trxIds, setTrxIds] = useState<Record<number, string>>({});
   /** the request whose lock box is open, and the reason typed into it */
   const [lockFor, setLockFor] = useState(0);
   const [reason, setReason] = useState('');
@@ -51,6 +52,12 @@ export default function CashierControl({
   const [applied, setApplied] = useState('');
 
   const isDeposit = table === 'deposits';
+
+  useEffect(() => {
+    if (!backendReady || state !== 'pending') return;
+    const timer = setInterval(() => { void load('pending', applied); }, 5000);
+    return () => clearInterval(timer);
+  }, [backendReady, state, applied]);
 
   async function load(next: RequestState | 'all', term = applied) {
     setState(next);
@@ -83,7 +90,7 @@ export default function CashierControl({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           table, id, decision, note: notes[id] ?? '', reason: decision === 'lock' ? reason : '',
-          state, search: applied,
+          trxId: decision === 'approve' ? trxIds[id] ?? '' : '', state, search: applied,
         }),
       });
       const data = (await res.json()) as
@@ -96,6 +103,7 @@ export default function CashierControl({
       }
       setRows(data.rows);
       setNotes((n) => ({ ...n, [id]: '' }));
+      setTrxIds((n) => ({ ...n, [id]: '' }));
       if (decision === 'lock') {
         setLockFor(0);
         setReason('');
@@ -296,6 +304,15 @@ export default function CashierControl({
                             disabled={busy}
                             onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value }))}
                           />
+                          {!isDeposit && (
+                            <input
+                              className="adm__mini"
+                              placeholder="Approval TrxID"
+                              value={trxIds[r.id] ?? ''}
+                              disabled={busy}
+                              onChange={(e) => setTrxIds((n) => ({ ...n, [r.id]: e.target.value }))}
+                            />
+                          )}
                           <div className="adm__rowacts">
                             <button type="button" className="btn btn--gold" disabled={busy}
                                     onClick={() => void review(r.id, 'approve')}>

@@ -122,7 +122,9 @@ export async function listCashier(
   // .returns<>() gives the rows a shape the mapper can read. The charge
   // columns arrive with migration 006, so a server that has not run it yet
   // falls back to the older, narrower select rather than losing the queue.
-  const base = table === 'deposits' ? 'sender_no, txn_id' : 'account_no';
+  const base = table === 'deposits'
+    ? 'sender_no, txn_id'
+    : 'account_no, user_phone, user_display_name, debited';
   const withCharge = table === 'withdrawals'
     ? `${base}, charge_amount, charge_channel_id, charge_account_no, charge_trx_id, charge_paid_at`
     : base;
@@ -493,8 +495,8 @@ function toCashierRow(row: Record<string, unknown>): CashierRow {
   return {
     id: Number(row.id),
     userId: String(row.user_id),
-    phone: profile?.phone ?? '—',
-    displayName: profile?.display_name ?? null,
+    phone: profile?.phone ?? String(row.user_phone ?? '—'),
+    displayName: profile?.display_name ?? (row.user_display_name as string | null) ?? null,
     playerNo: profile?.player_no == null ? null : Number(profile.player_no),
     channelId: String(row.channel_id),
     amount: Number(row.amount ?? 0),

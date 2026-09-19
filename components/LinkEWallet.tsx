@@ -120,6 +120,7 @@ export default function LinkEWallet({
     const { data, error } = await supabase
       .from('payout_accounts')
       .select('id, channel_id, account_no, holder, created_at')
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
     /* the table arrives with migration 005; without it the screen says so
        rather than looking empty */
@@ -151,6 +152,11 @@ export default function LinkEWallet({
     if ((wallets ?? []).length >= cfg.maxWallets) {
       setErr(`Maximum ${cfg.maxWallets} allowed`); return;
     }
+    if ((wallets ?? []).some((wallet) =>
+      wallet.channel_id === picked.channelId && wallet.account_no === clean
+    )) {
+      setErr('That number is already linked'); return;
+    }
     if (!realName && !holder.trim()) { setErr('Enter the account holder name'); return; }
     if (!hasTxnPassword) {
       if (pass.length < TXN_MIN || pass.length > TXN_MAX || !TXN_OK.test(pass)) {
@@ -178,12 +184,17 @@ export default function LinkEWallet({
       setHasTxnPassword(true);
       setConfirm('');
     }
-    const { error } = await supabase.from('payout_accounts').insert({
-      user_id: session.user.id,
-      channel_id: picked.channelId,
-      account_no: clean,
-      holder: (realName || holder).trim().slice(0, 60),
-    });
+    let error: { message: string } | null = null;
+    try {
+      ({ error } = await supabase.from('payout_accounts').insert({
+        user_id: session.user.id,
+        channel_id: picked.channelId,
+        account_no: clean,
+        holder: (realName || holder).trim().slice(0, 60),
+      }));
+    } catch (caught) {
+      error = { message: caught instanceof Error ? caught.message : 'Could not link it' };
+    }
     setBusy(false);
 
     if (error) {

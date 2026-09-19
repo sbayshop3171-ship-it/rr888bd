@@ -115,6 +115,7 @@ class MysqlQuery implements QueryBuilder {
   private orderBy: { key: string; asc: boolean } | null = null;
   private limitValue: number | null = null;
   private action: 'read' | 'write' = 'read';
+  private operation: 'insert' | 'update' | 'delete' | null = null;
   private data: Record<string, unknown> | null = null;
   private orFilter: string | null = null;
 
@@ -126,7 +127,12 @@ class MysqlQuery implements QueryBuilder {
     resolve?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null,
     reject?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
-    return this.request().then(resolve ?? ((value) => value as TResult1), reject ?? undefined);
+    return this.request()
+      .then((result) => resolve?.({ data: result.rows ?? null, error: null }) ?? result)
+      .catch((error) => {
+        const value = { data: null, error: { message: error instanceof Error ? error.message : 'Database query failed' } };
+        return reject ? reject(value) : value;
+      });
   }
 
   catch<TResult = never>(
@@ -193,6 +199,7 @@ class MysqlQuery implements QueryBuilder {
         orderBy: this.orderBy,
         limit: this.limitValue,
         action: this.action,
+        operation: this.operation,
         payload: this.data,
       }),
     });
@@ -203,18 +210,21 @@ class MysqlQuery implements QueryBuilder {
 
   insert(row: Record<string, unknown>): QueryBuilder {
     this.action = 'write';
+    this.operation = 'insert';
     this.data = row;
     return this;
   }
 
   update(row: Record<string, unknown>): QueryBuilder {
     this.action = 'write';
+    this.operation = 'update';
     this.data = row;
     return this;
   }
 
   delete(): QueryBuilder {
     this.action = 'write';
+    this.operation = 'delete';
     return this;
   }
 }
@@ -315,8 +325,26 @@ export function browserClient(): SupabaseClient | null {
   };
 }
 
-export function serverClient(_cookies?: any) {
-  return browserClient();
+export function serverClient(cookieStore?: { getAll: () => { name: string; value: string }[] }) {
+  const client = browserClient();
+  if (!client || !cookieStore) return client;
+
+  let session: Session | null = null;
+  try {
+    const raw = cookieStore.getAll().find((cookie) => cookie.name === 'rr888bd_session')?.value;
+    session = raw ? JSON.parse(decodeURIComponent(raw)) as Session : null;
+  } catch {
+    session = null;
+  }
+
+  return {
+    ...client,
+    auth: {
+      ...client.auth,
+      async getSession() { return { data: { session } }; },
+      async getUser() { return { data: { user: session?.user ?? null } }; },
+    },
+  };
 }
 
 export function adminClient() {

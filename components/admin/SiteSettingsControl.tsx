@@ -23,6 +23,60 @@ export default function SiteSettingsControl({ initial }: { initial: SiteSettings
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [screenshotInput, setScreenshotInput] = useState('');
+
+  async function readAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(new Error('Could not read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function addScreenshotFile(file: File) {
+    if (!file.type.startsWith('image/')) {
+      setError('Only image files are accepted for screenshots.');
+      return;
+    }
+    try {
+      const dataUrl = await readAsDataUrl(file);
+      setForm((f) => ({
+        ...f,
+        flashApp: {
+          ...f.flashApp,
+          screenshots: [...f.flashApp.screenshots, dataUrl],
+        },
+      }));
+      setNotice('New screenshot uploaded and added to the list.');
+    } catch {
+      setError('Could not read the file. Try again.');
+    }
+  }
+
+  async function replaceScreenshotFile(index: number, file: File) {
+    if (!file.type.startsWith('image/')) {
+      setError('Only image files are accepted for screenshots.');
+      return;
+    }
+    try {
+      const dataUrl = await readAsDataUrl(file);
+      setForm((f) => {
+        const screenshots = [...f.flashApp.screenshots];
+        screenshots[index] = dataUrl;
+        return {
+          ...f,
+          flashApp: {
+            ...f.flashApp,
+            screenshots,
+          },
+        };
+      });
+      setNotice('Screenshot replaced successfully.');
+    } catch {
+      setError('Could not replace the screenshot. Try again.');
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +92,7 @@ export default function SiteSettingsControl({ initial }: { initial: SiteSettings
           withdraw: form.withdraw,
           support: form.support,
           notice: form.notice,
+          flashApp: form.flashApp,
         }),
       });
       const data = (await res.json()) as
@@ -127,6 +182,168 @@ export default function SiteSettingsControl({ initial }: { initial: SiteSettings
             onChange={(e) => setForm((f) => ({ ...f, notice: e.target.value }))}
           />
         </label>
+      </div>
+
+      <div className="adm__card">
+        <h2 className="adm__cardh">App Store Screenshots</h2>
+        <p className="adm__hint" style={{ marginTop: 0 }}>
+          Upload, edit, remove and reorder screenshots for the /flash-app app listing. The live page updates as soon as you save the settings.
+        </p>
+
+        <div className="adm__formgrid">
+          <label className="adm__f">
+            <span>App name</span>
+            <input
+              value={form.flashApp.appName} disabled={busy}
+              onChange={(e) => setForm((f) => ({ ...f, flashApp: { ...f.flashApp, appName: e.target.value } }))}
+            />
+          </label>
+          <label className="adm__f">
+            <span>Short name</span>
+            <input
+              value={form.flashApp.shortName} disabled={busy}
+              onChange={(e) => setForm((f) => ({ ...f, flashApp: { ...f.flashApp, shortName: e.target.value } }))}
+            />
+          </label>
+          <label className="adm__f adm__f--wide">
+            <span>Tagline</span>
+            <input
+              value={form.flashApp.tagline} disabled={busy}
+              onChange={(e) => setForm((f) => ({ ...f, flashApp: { ...f.flashApp, tagline: e.target.value } }))}
+            />
+          </label>
+          <label className="adm__f adm__f--wide">
+            <span>App logo URL</span>
+            <input
+              type="url" value={form.flashApp.logoUrl} disabled={busy}
+              onChange={(e) => setForm((f) => ({ ...f, flashApp: { ...f.flashApp, logoUrl: e.target.value } }))}
+            />
+          </label>
+        </div>
+
+        <div className="adm__formgrid" style={{ marginTop: 12 }}>
+          <label className="adm__f adm__f--wide">
+            <span>Upload new screenshot image</span>
+            <input
+              type="file"
+              accept="image/*"
+              disabled={busy}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                await addScreenshotFile(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
+          <label className="adm__f adm__f--wide">
+            <span>Add screenshot URL</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={screenshotInput}
+                onChange={(e) => setScreenshotInput(e.target.value)}
+                placeholder="https://example.com/screenshot.jpg"
+                disabled={busy}
+              />
+              <button
+                type="button"
+                className="btn btn--gold"
+                onClick={() => {
+                  const clean = screenshotInput.trim();
+                  if (!clean) return;
+                  setForm((f) => ({
+                    ...f,
+                    flashApp: {
+                      ...f.flashApp,
+                      screenshots: [...f.flashApp.screenshots, clean],
+                    },
+                  }));
+                  setScreenshotInput('');
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </label>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 14 }}>
+          {form.flashApp.screenshots.map((src, index) => (
+            <div key={`${src}-${index}`} style={{ width: 120, padding: 8, borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ position: 'relative', width: '100%', height: 150 }}>
+                <img src={src} alt={`Flash app screenshot ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)' }} />
+                <button
+                  type="button"
+                  aria-label={`Move screenshot ${index + 1} up`}
+                  onClick={() => setForm((f) => {
+                    const screenshots = [...f.flashApp.screenshots];
+                    if (index === 0) return f;
+                    [screenshots[index - 1], screenshots[index]] = [screenshots[index], screenshots[index - 1]];
+                    return { ...f, flashApp: { ...f.flashApp, screenshots } };
+                  })}
+                  style={{ position: 'absolute', top: 6, left: 6, width: 22, height: 22, borderRadius: '50%', border: '0', background: 'rgba(0,0,0,0.65)', color: '#fff', cursor: 'pointer' }}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Move screenshot ${index + 1} down`}
+                  onClick={() => setForm((f) => {
+                    const screenshots = [...f.flashApp.screenshots];
+                    if (index === screenshots.length - 1) return f;
+                    [screenshots[index], screenshots[index + 1]] = [screenshots[index + 1], screenshots[index]];
+                    return { ...f, flashApp: { ...f.flashApp, screenshots } };
+                  })}
+                  style={{ position: 'absolute', top: 6, right: 30, width: 22, height: 22, borderRadius: '50%', border: '0', background: 'rgba(0,0,0,0.65)', color: '#fff', cursor: 'pointer' }}
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Remove screenshot ${index + 1}`}
+                  onClick={() => setForm((f) => ({
+                    ...f,
+                    flashApp: {
+                      ...f.flashApp,
+                      screenshots: f.flashApp.screenshots.filter((_, i) => i !== index),
+                    },
+                  }))}
+                  style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%', border: '0', background: 'rgba(0,0,0,0.65)', color: '#fff', cursor: 'pointer' }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <label className="adm__f" style={{ marginTop: 8 }}>
+                <span>Edit image URL</span>
+                <input
+                  value={src}
+                  disabled={busy}
+                  onChange={(e) => setForm((f) => {
+                    const screenshots = [...f.flashApp.screenshots];
+                    screenshots[index] = e.target.value;
+                    return { ...f, flashApp: { ...f.flashApp, screenshots } };
+                  })}
+                />
+              </label>
+
+              <label className="adm__f" style={{ marginTop: 8 }}>
+                <span>Replace file</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={busy}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    await replaceScreenshotFile(index, file);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
+          ))}
+        </div>
       </div>
 
       {error && <p className="adm__err">{error}</p>}

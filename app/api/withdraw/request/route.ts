@@ -9,6 +9,8 @@ import { lockStatus } from '@/lib/withdraw-lock';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const lastWithdrawalByUser = new Map<string, number>();
+
 /**
  * Raising a withdrawal.
  *
@@ -40,6 +42,10 @@ export async function POST(req: Request) {
   const { data: auth } = await asUser.auth.getUser();
   const uid = auth.user?.id;
   if (!uid) return fail('unauthorized', 'Log in first to withdraw', 401);
+  const previous = lastWithdrawalByUser.get(uid) ?? 0;
+  if (Date.now() - previous < 60_000) {
+    return fail('rate-limited', 'Please wait one minute before sending another withdrawal request', 429);
+  }
 
   const blocked = await accountBlock(asService, uid);
   if (blocked === 'banned') return fail('account-banned', 'This account has been banned. Contact support.', 403);
@@ -115,6 +121,8 @@ export async function POST(req: Request) {
     if (/balance|check/i.test(m)) return fail('insufficient-balance', 'Not enough balance', 400);
     return fail('db-error', 'Could not send the request — try again', 500);
   }
+
+  lastWithdrawalByUser.set(uid, Date.now());
 
   const id = typeof data === 'number' ? data : Number(data) || null;
   await asService.rpc('password_attempt', { p_user: uid, p_ok: true });

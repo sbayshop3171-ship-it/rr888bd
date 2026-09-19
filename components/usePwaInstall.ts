@@ -45,6 +45,8 @@ export type PwaInstall = {
   needsIosSteps: boolean;
   /** shows the browser's own dialog; resolves true when the user accepted */
   install: () => Promise<boolean>;
+  /** opens the web app shell from the installed app or home-page CTA */
+  openApp: () => void;
 };
 
 export function usePwaInstall(): PwaInstall {
@@ -85,5 +87,10 @@ export function usePwaInstall(): PwaInstall {
     return outcome === 'accepted';
   }, []);
 
-  return { canInstall, installed, needsIosSteps, install };
+  const openApp = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.location.assign('/');
+  }, []);
+
+  return { canInstall, installed, needsIosSteps, install, openApp };
 }

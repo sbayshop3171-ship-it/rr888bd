@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from 'react';
 import { CATALOGUE, PLAYABLE_IDS, playableFirst, type CategoryKey, type Game } from '@/lib/catalogue';
 import { applyOverrides } from '@/lib/game-control';
 import { CATEGORY_LABEL, t } from '@/lib/strings';
+import { useAuth } from './AuthProvider';
 import GameArt from './GameArt';
 import { FlameIcon, HeartIcon, LeftIcon, RightIcon } from './Icons';
 import { useFavourites } from './useFavourites';
@@ -22,13 +23,11 @@ export function GameCard({
   faved: boolean;
   onToggleFavourite: (id: string) => void;
 }) {
-  /* Tapping the art opens the game and nothing else — its own engine if it has
-     one, otherwise the fullscreen player. There is no interstitial and no
-     deposit prompt on the way: the player always has something to show, a
-     clip or a provider frame or the game's own art, and the deposit button
-     lives in its bar. */
   const own = PLAYABLE_IDS.includes(game.id);
   const href = own ? `/game/${game.id}` : `/play/${game.id}`;
+  const { ready, wallet } = useAuth();
+  const [depositPrompt, setDepositPrompt] = useState(false);
+  const isAviator = game.id === 'aviator' || href === '/game/aviator';
 
   /* The press animation has to outlive the press — a finger lifts long before
      the squash-and-pop finishes, and :active would cut it off mid-way. The
@@ -36,12 +35,23 @@ export function GameCard({
      (children animate too, hence the currentTarget check). */
   const [tapped, setTapped] = useState(false);
 
+  const handleGameClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isAviator || !ready) return;
+
+    const balance = wallet?.balance ?? 0;
+    if (balance <= 0) {
+      event.preventDefault();
+      setDepositPrompt(true);
+    }
+  };
+
   return (
     <div className="game-cell">
       <Link
         className={`game${tapped ? ' game--tap' : ''}`}
         href={href}
         onPointerDown={() => setTapped(true)}
+        onClick={handleGameClick}
         onAnimationEnd={(e) => { if (e.target === e.currentTarget) setTapped(false); }}
       >
         <GameArt id={game.id} thumb={game.thumb} name={game.name} provider={game.provider} />
@@ -66,6 +76,27 @@ export function GameCard({
       >
         <HeartIcon filled={faved} />
       </button>
+
+      {depositPrompt && (
+        <div className="gsheet" role="dialog" aria-modal="true" aria-labelledby={`deposit-title-${game.id}`} onClick={() => setDepositPrompt(false)}>
+          <div className="gsheet__card" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="gsheet__x" aria-label="Close" onClick={() => setDepositPrompt(false)}>×</button>
+            <span className="gsheet__icon" aria-hidden>💰</span>
+            <h2 className="gsheet__title" id={`deposit-title-${game.id}`}>পর্যাপ্ত ব্যালেন্স নেই</h2>
+            <p className="gsheet__note">
+              গেমটি খেলতে আপনার অ্যাকাউন্টে পর্যাপ্ত ব্যালেন্স নেই। অনুগ্রহ করে প্রথমে ডিপোজিট করুন।
+            </p>
+            <div className="gsheet__acts">
+              <Link href="/deposit" className="btn btn--gold btn--block" onClick={() => setDepositPrompt(false)}>
+                Deposit Now
+              </Link>
+              <button type="button" className="btn btn--ghost btn--block" onClick={() => setDepositPrompt(false)}>
+                পরে করব
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

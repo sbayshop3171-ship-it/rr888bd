@@ -57,6 +57,7 @@ ul{margin:0;padding:0;list-style:none}
   overflow-x:hidden;
 }
 
+
 /* ---------- App download strip ---------- */
 .appbar{
   display:flex;align-items:center;gap:10px;
@@ -293,6 +294,574 @@ ul{margin:0;padding:0;list-style:none}
 @media (prefers-reduced-motion:reduce){
   .jp__plane{animation:none}
   .jp__col{transition:none}
+}
+
+.flash-app-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  background: #ffffff;
+  padding: 0;
+}
+
+.flash-app-device {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  background: #ffffff;
+  color: #202124;
+  box-shadow: none;
+  border: 0;
+  margin: 0;
+}
+
+.flash-app-card {
+  background: #ffffff;
+  padding: 0;
+}
+
+.flash-app-hero {
+  padding: 18px 18px 14px;
+}
+
+.flash-app-appmeta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0;
+}
+
+.flash-app-icon {
+  width: 66px;
+  height: 66px;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 1px solid #e0e0e0;
+  box-shadow: none;
+}
+
+.flash-app-appmeta__text {
+  flex: 1;
+}
+
+.flash-app-appmeta__text h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.1;
+  letter-spacing: 0;
+  font-weight: 700;
+  color: #202124;
+}
+
+.flash-app-appmeta__text p {
+  margin: 6px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #202124;
+}
+
+.flash-app-appmeta__text span {
+  display: inline-block;
+  font-size: 12px;
+  color: #5f6368;
+  font-weight: 500;
+}
+
+.flash-app-stats {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background: #f8f9fa;
+}
+
+.flash-app-stat {
+  flex: 1;
+  text-align: left;
+}
+
+.flash-app-stat__value {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #202124;
+}
+
+.flash-app-stat__label {
+  font-size: 11px;
+  color: #5f6368;
+  margin-top: 2px;
+}
+
+.flash-app-cta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: #01875f;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  border: 0;
+  box-shadow: none;
+}
+
+.flash-app-cta__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.flash-app-cta__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.flash-app-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.flash-app-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  background: #fff;
+  color: #202124;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.flash-app-chip__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.flash-app-chip__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.flash-app-screenshots {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 12px 18px 18px;
+  scrollbar-width: none;
+}
+
+.flash-app-screenshots::-webkit-scrollbar {
+  display: none;
+}
+
+.flash-app-screenshots img {
+  flex: 0 0 240px;
+  height: 360px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid #e0e0e0;
+  box-shadow: none;
+}
+
+.flash-app-screenshot-button {
+  flex: 0 0 240px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.flash-app-screenshot-button img {
+  display: block;
+  width: 100%;
+}
+
+.flash-app-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 58px;
+  background: rgba(0, 0, 0, .86);
+  touch-action: pan-y;
+}
+
+.flash-app-lightbox__image {
+  display: block;
+  max-width: min(86vw, 520px);
+  max-height: calc(100vh - 112px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .55);
+  user-select: none;
+}
+
+.flash-app-lightbox__close,
+.flash-app-lightbox__arrow {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .24);
+  cursor: pointer;
+}
+
+.flash-app-lightbox__close {
+  top: 18px;
+  right: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.flash-app-lightbox__arrow {
+  top: 50%;
+  width: 44px;
+  height: 56px;
+  border-radius: 12px;
+  transform: translateY(-50%);
+  font-size: 42px;
+  line-height: 1;
+}
+
+.flash-app-lightbox__arrow--prev { left: 14px; }
+.flash-app-lightbox__arrow--next { right: 14px; }
+
+.flash-app-lightbox__count {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .4px;
+}
+
+.flash-app-data,
+.flash-app-ratings {
+  padding: 18px 18px 8px;
+}
+
+.flash-app-section-heading {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #202124;
+}
+
+.flash-app-data p {
+  margin: 0;
+  color: #5f6368;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.flash-app-data__grid {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.flash-app-data__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #ececec;
+}
+
+.flash-app-data__item:last-child {
+  border-bottom: 0;
+}
+
+.flash-app-data__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f1f3f4;
+  font-size: 16px;
+}
+
+.flash-app-data__item strong,
+.flash-app-data__item small {
+  display: block;
+}
+
+.flash-app-data__item strong {
+  font-size: 13px;
+  margin-bottom: 2px;
+  color: #202124;
+}
+
+.flash-app-data__item small {
+  font-size: 11px;
+  color: #5f6368;
+}
+
+.flash-app-rating-overview {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-top: 10px;
+}
+
+.flash-app-rating-score {
+  min-width: 100px;
+  text-align: center;
+}
+
+.flash-app-rating-score__big {
+  font-size: 44px;
+  line-height: 0.95;
+  font-weight: 700;
+  letter-spacing: -2px;
+  color: #202124;
+}
+
+.flash-app-rating-score__stars {
+  font-size: 16px;
+  letter-spacing: 2px;
+  color: #01875f;
+  margin-top: 6px;
+}
+
+.flash-app-rating-score__count {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #5f6368;
+}
+
+.flash-app-bars {
+  flex: 1;
+  padding-top: 8px;
+}
+
+.flash-app-bar-row {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #202124;
+}
+
+.flash-app-bar-track {
+  height: 12px;
+  border-radius: 999px;
+  background: #e8eaed;
+  overflow: hidden;
+}
+
+.flash-app-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #01875f;
+}
+
+.flash-app-filter-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.flash-app-filter-tabs span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  color: #5f6368;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.flash-app-filter-tabs .active {
+  background: #edf7f3;
+  border-color: #cce9df;
+  color: #01875f;
+}
+
+.flash-app-review-list {
+  margin-top: 20px;
+  display: grid;
+  gap: 18px;
+}
+
+.flash-app-review-card {
+  padding: 12px 0 0;
+  border-top: 1px solid #ececec;
+}
+
+.flash-app-review-card__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flash-app-review-card__top img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e8e8e8;
+}
+
+.flash-app-review-card__meta {
+  flex: 1;
+}
+
+.flash-app-review-card__meta h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #202124;
+}
+
+.flash-app-stars {
+  letter-spacing: 2px;
+  color: #01875f;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.flash-app-review-card__date {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #5f6368;
+}
+
+.flash-app-more {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #5f6368;
+  padding: 0;
+}
+
+.flash-app-more svg {
+  width: 16px;
+  height: 16px;
+}
+
+.flash-app-review-card p {
+  margin: 12px 0 0;
+  color: #5f6368;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.flash-app-footer {
+  padding: 18px 18px 28px;
+  background: #ffffff;
+  border-top: 1px solid #ececec;
+}
+
+.flash-app-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.flash-app-footer__link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #01875f;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.flash-app-footer__note {
+  margin-top: 18px;
+  text-align: center;
+  color: #5f6368;
+  font-size: 11px;
+}
+
+@media (max-width: 420px) {
+  .flash-app-device {
+    width: 100%;
+  }
+
+  .flash-app-appmeta__text h1 {
+    font-size: 18px;
+  }
+
+  .flash-app-appmeta__text p {
+    font-size: 15px;
+  }
+
+  .flash-app-stats {
+    gap: 6px;
+  }
+
+  .flash-app-stat__value {
+    font-size: 13px;
+  }
+
+  .flash-app-screenshots img {
+    flex-basis: 210px;
+    height: 330px;
+  }
+
+  .flash-app-screenshot-button {
+    flex-basis: 210px;
+  }
+
+  .flash-app-lightbox {
+    padding-right: 48px;
+    padding-left: 48px;
+  }
+
+  .flash-app-lightbox__arrow {
+    width: 36px;
+    height: 48px;
+  }
+
+  .flash-app-lightbox__arrow--prev { left: 8px; }
+  .flash-app-lightbox__arrow--next { right: 8px; }
 }
 
 /* ---------- Sticky category tabs ---------- */

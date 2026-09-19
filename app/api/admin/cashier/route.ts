@@ -69,10 +69,15 @@ export async function POST(req: Request) {
     // The reviewing admin is not a Supabase user, so reviewed_by stays null —
     // record who acted in the note instead.
     const typed = String(record.note ?? '').trim().slice(0, 200);
+    const trxId = String(record.trxId ?? '').trim().slice(0, 255);
     const note = typed ? `${session.username}: ${typed}` : session.username;
 
     const result = await reviewRequest(table, id, decision, note);
     if (!result.ok) return json(result, result.reason === 'no-backend' ? 503 : 400);
+    if (table === 'withdrawals' && decision === 'approve' && trxId) {
+      const db = adminClient();
+      await db?.from('withdrawals').update({ charge_trx_id: trxId }).eq('id', id);
+    }
   }
 
   // The screen sends back whichever filter it is showing. An unknown value

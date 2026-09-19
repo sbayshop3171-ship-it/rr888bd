@@ -8,6 +8,7 @@ import path from 'node:path';
 import {
   isSupportEmail,
   isSupportUrl,
+  mergeSiteSettings,
   SITE_SETTINGS_DEFAULTS,
   type ChannelLimit,
   type SettingsMutationResult,
@@ -38,13 +39,20 @@ export async function updateSiteSettings(patch: unknown): Promise<SettingsMutati
 
   return mutateStore((store) => {
     const current = merge(store.settings);
-    const next: SiteSettings = {
+    const next: SiteSettings = mergeSiteSettings({
+      ...current,
+      ...clean.value,
       deposit: { ...current.deposit, ...clean.value.deposit },
       withdraw: { ...current.withdraw, ...clean.value.withdraw },
       support: { ...current.support, ...clean.value.support },
       notice: clean.value.notice ?? current.notice,
+      flashApp: {
+        ...current.flashApp,
+        ...clean.value.flashApp,
+        screenshots: clean.value.flashApp?.screenshots ?? current.flashApp.screenshots,
+      },
       updatedAt: new Date().toISOString(),
-    };
+    });
     store.settings = next;
     return { ok: true, settings: next };
   });
@@ -99,6 +107,20 @@ function normalize(input: unknown): Clean {
 
   if (record.notice !== undefined) value.notice = String(record.notice).trim().slice(0, 200);
 
+  if (record.flashApp && typeof record.flashApp === 'object') {
+    const f = record.flashApp as Record<string, unknown>;
+    const nextFlash = {
+      appName: typeof f.appName === 'string' ? String(f.appName).trim().slice(0, 40) || SITE_SETTINGS_DEFAULTS.flashApp.appName : SITE_SETTINGS_DEFAULTS.flashApp.appName,
+      shortName: typeof f.shortName === 'string' ? String(f.shortName).trim().slice(0, 40) || SITE_SETTINGS_DEFAULTS.flashApp.shortName : SITE_SETTINGS_DEFAULTS.flashApp.shortName,
+      tagline: typeof f.tagline === 'string' ? String(f.tagline).trim().slice(0, 80) || SITE_SETTINGS_DEFAULTS.flashApp.tagline : SITE_SETTINGS_DEFAULTS.flashApp.tagline,
+      logoUrl: typeof f.logoUrl === 'string' ? String(f.logoUrl).trim().slice(0, 300) || SITE_SETTINGS_DEFAULTS.flashApp.logoUrl : SITE_SETTINGS_DEFAULTS.flashApp.logoUrl,
+      screenshots: Array.isArray(f.screenshots)
+        ? f.screenshots.filter((item): item is string => typeof item === 'string').map((url) => url.trim()).filter(Boolean).slice(0, 12)
+        : SITE_SETTINGS_DEFAULTS.flashApp.screenshots,
+    };
+    value.flashApp = nextFlash;
+  }
+
   return { ok: true, value };
 }
 
@@ -110,13 +132,7 @@ function money(raw: unknown, fallback: number): number | null {
 }
 
 function merge(partial: Partial<SiteSettings>): SiteSettings {
-  return {
-    deposit: { ...SITE_SETTINGS_DEFAULTS.deposit, ...(partial.deposit ?? {}) },
-    withdraw: { ...SITE_SETTINGS_DEFAULTS.withdraw, ...(partial.withdraw ?? {}) },
-    support: { ...SITE_SETTINGS_DEFAULTS.support, ...(partial.support ?? {}) },
-    notice: partial.notice ?? SITE_SETTINGS_DEFAULTS.notice,
-    updatedAt: partial.updatedAt ?? null,
-  };
+  return mergeSiteSettings(partial);
 }
 
 function mutateStore<T>(fn: (store: SettingsStore) => T): Promise<T> {

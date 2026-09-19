@@ -7,7 +7,7 @@ import { BRAND } from '@/lib/brand';
 /** Two things live here: the web app (installed straight from the browser,
     no store, always the current build) and the separate signal APK. */
 export default function DownloadPage() {
-  const { canInstall, installed, needsIosSteps, install } = usePwaInstall();
+  const { canInstall, installed, needsIosSteps, install, openApp } = usePwaInstall();
 
   return (
     <>
@@ -28,9 +28,9 @@ export default function DownloadPage() {
 
       <div style={{ margin: 12 }}>
         {installed ? (
-          <div className="note" style={{ margin: 0 }}>
-            ✓ The app is already installed — you are in it right now.
-          </div>
+          <button className="btn btn--gold btn--block" type="button" onClick={openApp}>
+            Open App
+          </button>
         ) : canInstall ? (
           <button className="btn btn--gold btn--block" type="button" onClick={() => void install()}>
             Install the app

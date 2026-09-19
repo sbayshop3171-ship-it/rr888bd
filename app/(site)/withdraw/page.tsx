@@ -125,6 +125,7 @@ export default function WithdrawPage() {
     const { data, error } = await supabase
       .from('payout_accounts')
       .select('id, channel_id, account_no, holder')
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: true });
     if (error) {
       setWalletsSupported(false);
@@ -200,13 +201,21 @@ export default function WithdrawPage() {
     const no = newNo.replace(/[\s-]+/g, '');
     if (no.length < 4) { setErr({ add: 'Enter a valid number' }); return; }
     if (forMethod.length >= cfg.maxWallets) { setErr({ add: `You can keep up to ${cfg.maxWallets} wallets` }); return; }
+    if (forMethod.some((wallet) => wallet.account_no === no)) {
+      setErr({ add: 'That number is already saved' }); return;
+    }
     setBusy(true);
-    const { error } = await supabase.from('payout_accounts').insert({
-      user_id: session.user.id,
-      channel_id: method.channelId,
-      account_no: no,
-      holder: newHolder.trim().slice(0, 60),
-    });
+    let error: { message: string } | null = null;
+    try {
+      ({ error } = await supabase.from('payout_accounts').insert({
+        user_id: session.user.id,
+        channel_id: method.channelId,
+        account_no: no,
+        holder: newHolder.trim().slice(0, 60),
+      }));
+    } catch (caught) {
+      error = { message: caught instanceof Error ? caught.message : 'Could not add it' };
+    }
     setBusy(false);
     if (error) {
       setErr({ add: /duplicate|unique/i.test(error.message) ? 'That number is already saved' : 'Could not add it — try again' });
@@ -222,7 +231,8 @@ export default function WithdrawPage() {
 
   const removeWallet = async (id: number) => {
     if (!supabase) return;
-    const { error } = await supabase.from('payout_accounts').delete().eq('id', id);
+    const { error } = await supabase.from('payout_accounts').delete()
+      .eq('id', id).eq('user_id', session?.user.id ?? '');
     if (error) { toast('Could not remove it'); return; }
     if (walletId === id) setWalletId(null);
     await loadWallets();

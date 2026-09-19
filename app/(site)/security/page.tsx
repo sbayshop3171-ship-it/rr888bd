@@ -44,6 +44,20 @@ export default function SecurityPage() {
   const [hasTxnPassword, setHasTxnPassword] = useState(false);
 
   useEffect(() => {
+    if (!session) return;
+    let live = true;
+    void fetch('/api/security/score', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data: { ok?: boolean; wallet?: boolean; transactionPassword?: boolean }) => {
+        if (!live || !data.ok) return;
+        setHasWallet(Boolean(data.wallet));
+        setHasTxnPassword(Boolean(data.transactionPassword));
+      })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, [session]);
+
+  useEffect(() => {
     if (!supabase || !session) return;
     let live = true;
     void supabase.from('payout_accounts').select('id').limit(1)

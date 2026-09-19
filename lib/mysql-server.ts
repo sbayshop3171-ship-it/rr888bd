@@ -120,6 +120,27 @@ export async function ensureMysqlSchema() {
     `);
 
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        user_id BIGINT UNSIGNED NOT NULL,
+        type ENUM('deposit','withdrawal','bonus','bet','win','adjustment') NOT NULL,
+        amount BIGINT NOT NULL DEFAULT 0,
+        balance_before BIGINT NOT NULL DEFAULT 0,
+        balance_after BIGINT NOT NULL DEFAULT 0,
+        kind VARCHAR(32) DEFAULT NULL,
+        reference VARCHAR(100) DEFAULT NULL,
+        ref VARCHAR(100) DEFAULT NULL,
+        status ENUM('pending','approved','rejected','completed') NOT NULL DEFAULT 'completed',
+        notes TEXT DEFAULT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_transactions_user (user_id),
+        KEY idx_transactions_reference (reference),
+        CONSTRAINT fk_transactions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS profiles (
         id VARCHAR(255) NOT NULL,
         user_id VARCHAR(255) DEFAULT NULL,
@@ -190,6 +211,9 @@ export async function ensureMysqlSchema() {
         status ENUM('pending', 'approved', 'rejected', 'cancelled') NOT NULL DEFAULT 'pending',
         admin_note TEXT DEFAULT NULL,
         account_no VARCHAR(100) DEFAULT NULL,
+        user_phone VARCHAR(20) DEFAULT NULL,
+        user_display_name VARCHAR(120) DEFAULT NULL,
+        debited TINYINT(1) NOT NULL DEFAULT 0,
         charge_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
         charge_channel_id VARCHAR(64) DEFAULT NULL,
         charge_account_no VARCHAR(100) DEFAULT NULL,
@@ -205,6 +229,21 @@ export async function ensureMysqlSchema() {
         KEY idx_withdrawals_state (state),
         KEY idx_withdrawals_status (status),
         KEY idx_withdrawals_reviewed (reviewed_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payout_accounts (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        user_id BIGINT UNSIGNED NOT NULL,
+        channel_id VARCHAR(64) NOT NULL,
+        account_no VARCHAR(100) NOT NULL,
+        holder VARCHAR(120) DEFAULT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_payout_account (user_id, channel_id, account_no),
+        KEY idx_payout_accounts_user (user_id),
+        CONSTRAINT fk_payout_accounts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
@@ -232,6 +271,11 @@ export async function ensureMysqlSchema() {
     await ensureColumn('profiles', 'bonus_balance', 'DECIMAL(15,2)', '0.00', false);
     await ensureColumn('profiles', 'turnover_need', 'DECIMAL(15,2)', '0.00', false);
     await ensureColumn('profiles', 'turnover_done', 'DECIMAL(15,2)', '0.00', false);
+    await ensureColumn('transactions', 'kind', 'VARCHAR(32)', 'NULL', true);
+    await ensureColumn('transactions', 'ref', 'VARCHAR(100)', 'NULL', true);
+    await ensureColumn('users', 'transaction_password_hash', 'VARCHAR(255)', 'NULL', true);
+    await ensureColumn('users', 'transaction_password_failed', 'TINYINT UNSIGNED', '0', false);
+    await ensureColumn('users', 'transaction_password_locked_until', 'DATETIME', 'NULL', true);
 
     const [missingProfiles]: any = await pool.query(`
       SELECT u.id, u.referral_code
@@ -260,6 +304,9 @@ export async function ensureMysqlSchema() {
     await ensureColumn('withdrawals', 'state', "ENUM('pending','approved','rejected','cancelled')", "'pending'", false);
     await ensureColumn('withdrawals', 'admin_note', 'TEXT', 'NULL', true);
     await ensureColumn('withdrawals', 'account_no', 'VARCHAR(100)', 'NULL', true);
+    await ensureColumn('withdrawals', 'user_phone', 'VARCHAR(20)', 'NULL', true);
+    await ensureColumn('withdrawals', 'user_display_name', 'VARCHAR(120)', 'NULL', true);
+    await ensureColumn('withdrawals', 'debited', 'TINYINT(1)', '0', false);
     await ensureColumn('withdrawals', 'charge_amount', 'DECIMAL(15,2)', '0.00', false);
     await ensureColumn('withdrawals', 'charge_channel_id', 'VARCHAR(64)', 'NULL', true);
     await ensureColumn('withdrawals', 'charge_account_no', 'VARCHAR(100)', 'NULL', true);

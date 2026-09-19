@@ -125,6 +125,8 @@ function Board() {
       // not after a second round trip for the wallet
       void refresh();
       if (!data.ok) {
+        if (action === 'bet') patch(i, { staked: null, queued: false, cashedAt: null });
+        if (action === 'cancel') patch(i, { staked: null, queued: false, cashedAt: null });
         toast(BET_ERROR[data.reason] ?? 'Something went wrong');
         return null;
       }
@@ -135,7 +137,29 @@ function Board() {
     } finally {
       setSeatBusy(i, false);
     }
-  }, [refresh, setSeatBusy, toast]);
+  }, [patch, refresh, setSeatBusy, toast]);
+
+  // Restore a live seat from the server after a round transition or a reload.
+  // This closes the small window where a successful debit can arrive while
+  // the local crash animation is clearing its optimistic state.
+  useEffect(() => {
+    const roundId = round?.id;
+    if (!roundId) return;
+    let alive = true;
+    void fetch('/api/aviator/play', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data: { ok?: boolean; roundId?: number; bets?: { slot: 0 | 1; roundId: number; stake: number; cashedAt: number | null; settled: boolean }[] }) => {
+        if (!alive || !data.ok || data.roundId !== roundId) return;
+        setSlots((current) => current.map((slot, index) => {
+          const bet = data.bets?.find((item) => item.slot === index && !item.settled);
+          return bet
+            ? { ...slot, stake: toTaka(bet.stake), staked: toTaka(bet.stake), cashedAt: bet.cashedAt, queued: false }
+            : slot;
+        }) as [Slot, Slot]);
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [round?.id]);
 
   // queued seats go live the moment the next betting window opens
   useEffect(() => {

@@ -130,15 +130,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return;
     let alive = true;
 
+    const syncServerSession = async (next: Session | null) => {
+      if (!next?.user.id) return;
+      await fetch('/api/session/sync', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ userId: next.user.id }),
+      }).catch(() => undefined);
+    };
+
     supabase.auth.getSession().then(async ({ data }) => {
       if (!alive) return;
       setSession(data.session);
+      await syncServerSession(data.session);
       await load(data.session?.user.id);
       setReady(true);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
+      syncServerSession(s);
       void load(s?.user.id);
     });
 
