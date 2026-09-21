@@ -46,18 +46,13 @@ class BrandTerminal extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 3 * scale,
-                height: 22 * scale,
-                decoration: BoxDecoration(
-                  color: NeonPalette.cyan,
-                  borderRadius: BorderRadius.circular(3 * scale),
-                  boxShadow: [
-                    BoxShadow(
-                      color: NeonPalette.cyan.withOpacity(0.7),
-                      blurRadius: 14 * scale,
-                    ),
-                  ],
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8 * scale),
+                child: Image.asset(
+                  'assets/aviator_signal_v9.png',
+                  width: 34 * scale,
+                  height: 34 * scale,
+                  fit: BoxFit.cover,
                 ),
               ),
               SizedBox(width: 10 * scale),
