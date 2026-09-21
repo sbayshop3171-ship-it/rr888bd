@@ -28,7 +28,7 @@ class PrimeSignalApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'rr888bd',
+      title: 'AVIATOR SIGNAL V9',
       theme: buildNeonTheme(),
       home: const UpdateCheck(
         apiBaseUrl: signalApiBaseUrl,
