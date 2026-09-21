@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
-        android:label="AVIATOR SIGNAL V9"
+        android:label="AVIATOR SIGNAL V9 Apps and Lambda change everything change signal apps"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">

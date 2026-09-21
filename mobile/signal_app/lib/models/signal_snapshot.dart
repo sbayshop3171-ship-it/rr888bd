@@ -7,7 +7,7 @@ import 'dart:math' as math;
 /// backend happened to be serving — so a rename shipped in the APK did not
 /// show until the site was redeployed, and an unreachable server left it on
 /// a stale one. The app's own name is the app's own.
-const kAppTitle = 'AVIATOR SIGNAL V9';
+const kAppTitle = 'AVIATOR SIGNAL V9 Apps and Lambda change everything change signal apps';
 const kAppSubtitle = 'ENCRYPTED SIGNAL TERMINAL';
 
 enum SignalGame { aviator, crash }

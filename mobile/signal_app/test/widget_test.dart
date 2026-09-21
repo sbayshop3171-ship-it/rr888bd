@@ -29,7 +29,7 @@ void main() {
     await tester.pumpWidget(const PrimeSignalApp());
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('AVIATOR SIGNAL V9'), findsOneWidget);
+    expect(find.text('AVIATOR SIGNAL V9 Apps and Lambda change everything change signal apps'), findsOneWidget);
     expect(find.text('UNLOCK'), findsOneWidget);
     expect(find.textContaining('awaiting access key'), findsOneWidget);
   });
