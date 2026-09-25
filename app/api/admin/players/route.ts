@@ -19,7 +19,12 @@ export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
   const search = params.get('search') ?? '';
   // an agent's search runs over their own players only
-  const result = await listPlayers(search, 100, await playerScope(gate.session), params.get('filter') === 'locked');
+  let result;
+  try {
+    result = await listPlayers(search, 100, await playerScope(gate.session), params.get('filter') === 'locked');
+  } catch (error) {
+    return json({ ok: false, reason: 'db-error', message: error instanceof Error ? error.message : 'The player list could not be read' }, 500);
+  }
   return result.ok
     ? json({ ok: true, players: result.data })
     : json(result, result.reason === 'no-backend' ? 503 : 500);
@@ -33,7 +38,12 @@ export async function POST(req: Request) {
   const gate = await requireAdmin('players.lock');
   if (!gate.ok) return gate.response;
   const { session } = gate;
-  const scope = await playerScope(session);
+  let scope;
+  try {
+    scope = await playerScope(session);
+  } catch (error) {
+    return json({ ok: false, reason: 'db-error', message: error instanceof Error ? error.message : 'Could not determine player scope' }, 500);
+  }
 
   let body: unknown;
   try {
@@ -87,7 +97,12 @@ export async function POST(req: Request) {
     return json({ ok: false, reason: 'invalid-action' }, 400);
   }
 
-  const players = await listPlayers(String(record.search ?? ''), 100, scope, record.filter === 'locked');
+  let players;
+  try {
+    players = await listPlayers(String(record.search ?? ''), 100, scope, record.filter === 'locked');
+  } catch (error) {
+    return json({ ok: false, reason: 'db-error', message: 'Saved — but the list could not be reloaded. Refresh the page.' }, 500);
+  }
   // saved either way; an empty list would look like the player vanished
   return players.ok
     ? json({ ok: true, players: players.data })

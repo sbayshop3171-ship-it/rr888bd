@@ -14,7 +14,16 @@ export default async function AdminUsers() {
   if (!session) return null;
   if (!can(session, 'players.read')) return <NoAccess what="The player list" />;
 
-  const players = await listPlayers('', 100, await playerScope(session));
+  let players;
+  try {
+    players = await listPlayers('', 100, await playerScope(session));
+  } catch (error) {
+    players = {
+      ok: false as const,
+      reason: 'db-error' as const,
+      message: error instanceof Error ? error.message : 'The player list could not be read',
+    };
+  }
 
   return (
     <>

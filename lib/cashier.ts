@@ -162,8 +162,9 @@ export async function listPlayers(
   agentCode?: string,
   onlyLocked = false,
 ): Promise<CashierResult<PlayerRow[]>> {
-  const db = adminClient();
-  if (!db) return NO_BACKEND;
+  try {
+    const db = adminClient();
+    if (!db) return NO_BACKEND;
 
   // Newer columns arrive with migrations: player_no and the hold switch with
   // 012, agent_code with 008. A database that has not run one yet drops back
@@ -203,7 +204,7 @@ export async function listPlayers(
     return query.returns<Record<string, unknown>[]>();
   };
 
-  for (const extra of TIERS) {
+    for (const extra of TIERS) {
     // asked to filter by a column this database does not have: an empty list
     // is the honest answer, not every player on the site
     if (agentCode && !extra.includes('agent_code')) return { ok: true, data: [] };
@@ -224,8 +225,15 @@ export async function listPlayers(
       }
     }
     return { ok: true, data: rows };
+    }
+    return { ok: false, reason: 'db-error', message: 'The player list could not be read' };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: 'db-error',
+      message: error instanceof Error ? error.message : 'The player list could not be read',
+    };
   }
-  return { ok: false, reason: 'db-error', message: 'The player list could not be read' };
 }
 
 /** Postgres has no column by that name, or PostgREST has not reloaded its
