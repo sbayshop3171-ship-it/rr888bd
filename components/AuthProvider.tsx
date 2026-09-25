@@ -4,7 +4,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import type { Session, SupabaseClient } from '@/lib/supabase';
-import { browserClient, isBackendReady } from '@/lib/supabase';
+import { browserClient, clearAuthStorage, isBackendReady, readAccessToken, readSession, readStoredUser } from '@/lib/supabase';
 import { normalizeAgentCode } from '@/lib/agent-links';
 import { emailToPhone, normalizePhone, phoneToEmail } from '@/lib/auth';
 
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   if (clientRef.current === null) clientRef.current = browserClient();
   const supabase = clientRef.current;
 
-  const [ready, setReady] = useState(!isBackendReady());
+  const [ready, setReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
@@ -126,7 +126,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } : null);
   }, [supabase]);
 
+  const hydrateFromStorage = useCallback(async () => {
+    const storedSession = readSession();
+    const storedUser = readStoredUser();
+    const token = readAccessToken();
+
+    if (!storedSession && !token && !storedUser) {
+      setSession(null);
+      setProfile(null);
+      setWallet(null);
+      setReady(true);
+      return;
+    }
+
+    const authSession = storedSession ?? (token ? { user: { id: String((storedUser as any)?.id ?? ''), email: (storedUser as any)?.email ?? null, created_at: (storedUser as any)?.created_at ?? new Date().toISOString() } } : null);
+    if (authSession) {
+      setSession(authSession);
+      await load(authSession.user.id);
+    }
+    setReady(true);
+  }, [load]);
+
   useEffect(() => {
+    void hydrateFromStorage();
+
     if (!supabase) return;
     let alive = true;
 
@@ -141,20 +164,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(async ({ data }) => {
       if (!alive) return;
-      setSession(data.session);
-      await syncServerSession(data.session);
-      await load(data.session?.user.id);
+      setSession(data.session ?? readSession());
+      await syncServerSession(data.session ?? readSession());
+      await load((data.session ?? readSession())?.user.id);
       setReady(true);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-      syncServerSession(s);
-      void load(s?.user.id);
+      setSession(s ?? readSession());
+      syncServerSession(s ?? readSession());
+      void load((s ?? readSession())?.user.id);
     });
 
     return () => { alive = false; sub.subscription.unsubscribe(); };
-  }, [supabase, load]);
+  }, [supabase, load, hydrateFromStorage]);
 
   /** Returns an error message, or null on success. */
   const signUp = useCallback<AuthValue['signUp']>(async (phone, password, referral, agentCode) => {
@@ -191,9 +214,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const signOut = useCallback(async () => {
-    await supabase?.auth.signOut();
+    clearAuthStorage();
+    setSession(null);
     setProfile(null);
     setWallet(null);
+    setReady(true);
+    try {
+      await fetch('/api/logout', { method: 'POST', credentials: 'include' }).catch(() => undefined);
+    } finally {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
   }, [supabase]);
 
   const refresh = useCallback(async () => {

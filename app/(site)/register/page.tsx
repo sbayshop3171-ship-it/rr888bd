@@ -83,17 +83,19 @@ export default function RegisterPage() {
         return;
       }
 
-      const userId = json?.user?.id ? String(json.user.id) : '';
-      const session = {
+      const userId = String(json?.user?.id ?? json?.session?.user?.id ?? '');
+      const session = json?.session ?? {
         user: {
           id: userId,
           email: `${f.phone.trim()}@local-user`,
           created_at: new Date().toISOString(),
         },
       };
+      const accessToken = typeof json?.access_token === 'string' ? json.access_token : null;
 
       try {
         localStorage.setItem('rr888bd_session', JSON.stringify(session));
+        if (accessToken) localStorage.setItem('rr888bd_access_token', accessToken);
         window.dispatchEvent(new Event('storage'));
         localStorage.removeItem(AGENT_KEY);
       } catch { /* private mode */ }

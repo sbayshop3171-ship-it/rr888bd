@@ -59,9 +59,25 @@ export default function MemberPage() {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!session && typeof window !== 'undefined') {
+      const raw = localStorage.getItem('rr888bd_session');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed?.user?.id) {
+            void refresh();
+          }
+        } catch {
+          // Ignore malformed persisted session data and fall back to guest.
+        }
+      }
+    }
+  }, [session, refresh]);
+
   if (!mounted) return null;
 
-  const signedIn = ready && Boolean(session);
+  const signedIn = Boolean(session) || Boolean(localStorage.getItem('rr888bd_session'));
   /* the player ID (migration 012) is the number support asks for; before it
      exists the phone number stands in, as it always did */
   const userId = profile?.player_no ? String(profile.player_no) : profile?.phone ?? '';

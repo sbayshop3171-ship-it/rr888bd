@@ -87,13 +87,53 @@ function apiUrl(path: string) {
   return new URL(path, base.endsWith('/') ? base : `${base}/`).toString();
 }
 
-function saveSession(session: Session | null) {
+const SESSION_KEY = 'rr888bd_session';
+const TOKEN_KEY = 'rr888bd_access_token';
+
+export function clearAuthStorage() {
+  if (typeof window === 'undefined') return;
+  const authKeys = ['access_token', 'user', SESSION_KEY, TOKEN_KEY];
+  for (const key of authKeys) localStorage.removeItem(key);
+
+  const cookiesToClear = ['access_token', 'user', 'rr888bd_session', 'rr888bd_access_token'];
+  document.cookie.split(';').forEach((cookie) => {
+    const [rawName] = cookie.split('=');
+    const name = rawName?.trim();
+    if (!name) return;
+    if (!cookiesToClear.includes(name) && !name.startsWith('rr888bd_')) return;
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax`;
+  });
+
+  try {
+    if ('caches' in window) {
+      void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+    }
+  } catch {
+    // Some browsers block cache access in private mode; the app still clears auth storage.
+  }
+}
+
+export function saveSession(session: Session | null, token?: string | null, user?: Record<string, unknown> | null) {
   if (typeof window === 'undefined') return;
   if (!session) {
-    localStorage.removeItem('rr888bd_session');
+    clearAuthStorage();
     return;
   }
-  localStorage.setItem('rr888bd_session', JSON.stringify(session));
+
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  const authUser = user ?? session.user ?? null;
+  if (authUser) localStorage.setItem('user', JSON.stringify(authUser));
+  else localStorage.removeItem('user');
+
+  const resolvedToken = token || readAccessToken() || null;
+  if (resolvedToken) {
+    localStorage.setItem(TOKEN_KEY, resolvedToken);
+    localStorage.setItem('access_token', resolvedToken);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('access_token');
+  }
+
   try {
     window.dispatchEvent(new Event('storage'));
   } catch {
@@ -102,11 +142,26 @@ function saveSession(session: Session | null) {
   }
 }
 
-function readSession(): Session | null {
+export function readSession(): Session | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem('rr888bd_session');
+    const raw = localStorage.getItem(SESSION_KEY);
     return raw ? (JSON.parse(raw) as Session) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readAccessToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY) || localStorage.getItem('access_token') || null;
+}
+
+export function readStoredUser(): Record<string, unknown> | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('user');
+    return raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
   } catch {
     return null;
   }
@@ -263,6 +318,7 @@ export function browserClient(): SupabaseClient | null {
           const phone = emailToPhone(args.email) ?? args.email.replace(/@.*$/, '');
           const res = await fetch(apiUrl('/api/register'), {
             method: 'POST',
+            credentials: 'include',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({
               phone,
@@ -272,10 +328,19 @@ export function browserClient(): SupabaseClient | null {
             }),
           });
           const json = await res.json();
-          if (!res.ok) return { data: { user: undefined }, error: { message: json.message || 'Registration failed' } };
-          const session: Session = { user: { id: String(json.user.id), email: json.user.email || phoneToEmail(phone) } };
-          saveSession(session);
-          return { data: { user: { id: String(json.user.id) } }, error: null };
+          const payload = json?.data ?? json;
+          if (!res.ok) return { data: { user: undefined }, error: { message: payload?.message || json?.message || 'Registration failed' } };
+          const userObj = payload?.user ?? payload?.session?.user ?? null;
+          const userId = String(userObj?.id ?? '');
+          const session: Session = {
+            user: {
+              id: userId,
+              email: userObj?.email || payload?.session?.user?.email || phoneToEmail(phone),
+              created_at: userObj?.created_at || payload?.session?.user?.created_at || new Date().toISOString(),
+            },
+          };
+          saveSession(session, typeof payload?.access_token === 'string' ? payload.access_token : null, userObj ?? null);
+          return { data: { user: { id: userId } }, error: null };
         } catch (error) {
           return { data: { user: undefined }, error: { message: error instanceof Error ? error.message : 'Registration failed' } };
         }
@@ -285,13 +350,23 @@ export function browserClient(): SupabaseClient | null {
           const phone = emailToPhone(args.email) ?? args.email.replace(/@.*$/, '');
           const res = await fetch(apiUrl('/api/login'), {
             method: 'POST',
+            credentials: 'include',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ phone, password: args.password }),
           });
           const json = await res.json();
-          if (!res.ok) return { data: undefined, error: { message: json.message || 'Login failed' } };
-          const session: Session = { user: { id: String(json.user.id), email: json.user.email || phoneToEmail(phone) } };
-          saveSession(session);
+          const payload = json?.data ?? json;
+          if (!res.ok) return { data: undefined, error: { message: payload?.message || json?.message || 'Login failed' } };
+          const userObj = payload?.user ?? payload?.session?.user ?? null;
+          const userId = String(userObj?.id ?? '');
+          const session: Session = {
+            user: {
+              id: userId,
+              email: userObj?.email || payload?.session?.user?.email || phoneToEmail(phone),
+              created_at: userObj?.created_at || payload?.session?.user?.created_at || new Date().toISOString(),
+            },
+          };
+          saveSession(session, typeof payload?.access_token === 'string' ? payload.access_token : null, userObj ?? null);
           return { data: { session }, error: null };
         } catch (error) {
           return { data: undefined, error: { message: error instanceof Error ? error.message : 'Login failed' } };
