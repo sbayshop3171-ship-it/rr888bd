@@ -129,6 +129,7 @@ export default function CashierHistory({
     void (async () => {
       for (const cols of TIERS[table]) {
         const { data, error } = await supabase.from(table).select(cols)
+          .eq('user_id', session.user.id)
           .order('created_at', { ascending: false })
           .limit(50);
         if (!live) return;

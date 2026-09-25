@@ -123,6 +123,8 @@ class MysqlQuery implements QueryBuilder {
   private operation: 'insert' | 'update' | 'delete' | null = null;
   private data: Record<string, unknown> | null = null;
   private orFilter: string | null = null;
+  private countRequested = false;
+  private headOnly = false;
 
   constructor(table: string) {
     this.table = table;
@@ -133,7 +135,7 @@ class MysqlQuery implements QueryBuilder {
     reject?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return this.request()
-      .then((result) => resolve?.({ data: result.rows ?? null, error: null }) ?? result)
+      .then((result) => resolve?.({ data: result.rows ?? null, count: result.count, error: null }) ?? result)
       .catch((error) => {
         const value = { data: null, error: { message: error instanceof Error ? error.message : 'Database query failed' } };
         return reject ? reject(value) : value;
@@ -146,8 +148,10 @@ class MysqlQuery implements QueryBuilder {
     return this.request().catch(reject ?? undefined);
   }
 
-  select(cols: string, _opts?: Record<string, unknown>): QueryBuilder {
+  select(cols: string, opts?: Record<string, unknown>): QueryBuilder {
     this.cols = cols;
+    this.countRequested = opts?.count === 'exact';
+    this.headOnly = opts?.head === true;
     return this;
   }
 
@@ -213,6 +217,8 @@ class MysqlQuery implements QueryBuilder {
         action: this.action,
         operation: this.operation,
         payload: this.data,
+        count: this.countRequested,
+        head: this.headOnly,
       }),
     });
     const json = await res.json().catch(() => ({} as Record<string, unknown>));

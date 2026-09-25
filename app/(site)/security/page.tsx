@@ -60,7 +60,7 @@ export default function SecurityPage() {
   useEffect(() => {
     if (!supabase || !session) return;
     let live = true;
-    void supabase.from('payout_accounts').select('id').limit(1)
+    void supabase.from('payout_accounts').select('id').eq('user_id', session.user.id).limit(1)
       .then((result) => { if (live) setHasWallet((result.data as { length?: number } | null)?.length ? ((result.data as { length?: number }).length ?? 0) > 0 : false); });
     void supabase.rpc('has_transaction_password')
       .then((result) => { if (live) setHasTxnPassword(result.data === true); });
