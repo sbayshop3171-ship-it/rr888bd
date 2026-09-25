@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { calculateFeePaisa } from '@/lib/cashier-config';
 import { getCashierConfig } from '@/lib/cashier-config-store';
 import { accountBlock } from '@/lib/player-status';
 import { adminClient, serverClient } from '@/lib/supabase';
@@ -90,6 +91,11 @@ export async function POST(req: Request) {
   }
 
   const amount = Math.round(taka * 100);
+  const feeAmount = calculateFeePaisa(amount, cfg);
+  const payoutAmount = amount - feeAmount;
+  if (payoutAmount <= 0) {
+    return fail('invalid-fee', 'The withdrawal amount must be greater than the configured fee', 400);
+  }
   const { data: wallet } = await asService.from('wallets').select('balance').eq('user_id', uid).maybeSingle();
   if ((Number(wallet?.balance ?? 0) - amount) < 0) {
     return fail('insufficient-balance', 'Not enough balance', 400);
@@ -101,6 +107,8 @@ export async function POST(req: Request) {
     p_user: uid,
     p_channel: method.channelId,
     p_amount: amount,
+    p_fee_amount: feeAmount,
+    p_payout_amount: payoutAmount,
     p_account_no: accountNo,
     p_password: String(record.password ?? ''),
   });
@@ -131,7 +139,7 @@ export async function POST(req: Request) {
   // database RPC has already deducted the requested amount atomically and
   // recorded the hold ledger entry; there is no agent-charge gate or second
   // TrxID step in this flow.
-  return json({ ok: true, id });
+  return json({ ok: true, id, feeAmount, payoutAmount });
 }
 
 /** Start of today in Bangladesh (UTC+6), as an ISO instant. */

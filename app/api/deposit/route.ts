@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { ensureMysqlSchema, getMysqlPool, parseMysqlUserId } from '@/lib/mysql-server';
 import { isKnownChannel } from '@/lib/payment-accounts-store';
 import { parseSessionUserId } from '@/lib/session-cookie';
+import { calculateFeePaisa } from '@/lib/cashier-config';
+import { getCashierConfig } from '@/lib/cashier-config-store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,6 +30,9 @@ export async function POST(req: Request) {
 
     await ensureMysqlSchema();
     const pool = await getMysqlPool();
+    const feeAmount = calculateFeePaisa(amount, (await getCashierConfig()).deposit);
+    const netAmount = amount - feeAmount;
+    if (netAmount <= 0) return fail('Deposit amount is not enough to cover the configured fee', 400);
     const [users] = await pool.execute('SELECT id FROM users WHERE id = ? LIMIT 1', [userId]);
     if (!(users as Record<string, unknown>[]).length) return fail('User not found', 404);
     const id = `${Date.now()}${randomInt(10, 100)}`;
@@ -39,9 +44,9 @@ export async function POST(req: Request) {
 
     await pool.execute(
       `INSERT INTO deposits
-        (id, user_id, channel_id, amount, state, status, sender_no, txn_id, method, method_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'pending', 'pending', ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      [id, userId, gateway, amount, senderNumber || null, trxid, String(body.method_id ?? gateway), String(body.method_id ?? gateway)],
+        (id, user_id, channel_id, amount, fee_amount, net_amount, state, status, sender_no, txn_id, method, method_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', 'pending', ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      [id, userId, gateway, amount, feeAmount, netAmount, senderNumber || null, trxid, String(body.method_id ?? gateway), String(body.method_id ?? gateway)],
     );
 
     return NextResponse.json({ ok: true, id, state: 'pending' }, { headers: { 'cache-control': 'no-store' } });

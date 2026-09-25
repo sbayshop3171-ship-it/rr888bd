@@ -211,6 +211,8 @@ async function ensureMysqlSchemaOnce() {
         sender_no VARCHAR(30) DEFAULT NULL,
         txn_id VARCHAR(255) DEFAULT NULL,
         method_id VARCHAR(100) DEFAULT NULL,
+        fee_amount BIGINT NOT NULL DEFAULT 0,
+        net_amount BIGINT NOT NULL DEFAULT 0,
         reviewed_at TIMESTAMP NULL DEFAULT NULL,
         method VARCHAR(100) DEFAULT 'bkash',
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -236,6 +238,8 @@ async function ensureMysqlSchemaOnce() {
         user_phone VARCHAR(20) DEFAULT NULL,
         user_display_name VARCHAR(120) DEFAULT NULL,
         debited TINYINT(1) NOT NULL DEFAULT 0,
+        fee_amount BIGINT NOT NULL DEFAULT 0,
+        payout_amount BIGINT NOT NULL DEFAULT 0,
         charge_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
         charge_channel_id VARCHAR(64) DEFAULT NULL,
         charge_account_no VARCHAR(100) DEFAULT NULL,
@@ -338,6 +342,8 @@ async function ensureMysqlSchemaOnce() {
     await ensureColumn('deposits', 'txn_id', 'VARCHAR(255)', 'NULL', true);
     await ensureColumn('deposits', 'method_id', 'VARCHAR(100)', 'NULL', true);
     await ensureColumn('deposits', 'bonus_amount', 'BIGINT', '0', false);
+    await ensureColumn('deposits', 'fee_amount', 'BIGINT', '0', false);
+    await ensureColumn('deposits', 'net_amount', 'BIGINT', '0', false);
     await ensureColumn('deposits', 'reviewed_at', 'TIMESTAMP', 'NULL', true);
     await ensureColumn('deposits', 'updated_at', 'TIMESTAMP', 'CURRENT_TIMESTAMP', false);
 
@@ -348,6 +354,8 @@ async function ensureMysqlSchemaOnce() {
     await ensureColumn('withdrawals', 'user_phone', 'VARCHAR(20)', 'NULL', true);
     await ensureColumn('withdrawals', 'user_display_name', 'VARCHAR(120)', 'NULL', true);
     await ensureColumn('withdrawals', 'debited', 'TINYINT(1)', '0', false);
+    await ensureColumn('withdrawals', 'fee_amount', 'BIGINT', '0', false);
+    await ensureColumn('withdrawals', 'payout_amount', 'BIGINT', '0', false);
     await ensureColumn('withdrawals', 'charge_amount', 'DECIMAL(15,2)', '0.00', false);
     await ensureColumn('withdrawals', 'charge_channel_id', 'VARCHAR(64)', 'NULL', true);
     await ensureColumn('withdrawals', 'charge_account_no', 'VARCHAR(100)', 'NULL', true);

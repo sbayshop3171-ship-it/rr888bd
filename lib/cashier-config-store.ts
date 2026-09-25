@@ -136,6 +136,18 @@ function cleanDeposit(
     out.trxPattern = src;
   }
 
+  if (raw.feeEnabled !== undefined) out.feeEnabled = Boolean(raw.feeEnabled);
+  if (raw.feePercent !== undefined) {
+    const value = rate(raw.feePercent, base.feePercent, 100);
+    if (value === null) return { ok: false, reason: 'invalid-amounts', field: 'deposit.feePercent' };
+    out.feePercent = value;
+  }
+  if (raw.feeFixed !== undefined) {
+    const value = rate(raw.feeFixed, base.feeFixed, 100_000_000);
+    if (value === null) return { ok: false, reason: 'invalid-amounts', field: 'deposit.feeFixed' };
+    out.feeFixed = value;
+  }
+
   return out;
 }
 
@@ -192,6 +204,17 @@ function cleanWithdraw(
   if (raw.chargePerThousand !== undefined) {
     out.chargePerThousand = clampInt(raw.chargePerThousand, 0, 100_000, base.chargePerThousand);
   }
+  if (raw.feeEnabled !== undefined) out.feeEnabled = Boolean(raw.feeEnabled);
+  if (raw.feePercent !== undefined) {
+    const value = rate(raw.feePercent, base.feePercent, 100);
+    if (value === null) return { ok: false, reason: 'invalid-amounts', field: 'withdraw.feePercent' };
+    out.feePercent = value;
+  }
+  if (raw.feeFixed !== undefined) {
+    const value = rate(raw.feeFixed, base.feeFixed, 100_000_000);
+    if (value === null) return { ok: false, reason: 'invalid-amounts', field: 'withdraw.feeFixed' };
+    out.feeFixed = value;
+  }
 
   return out;
 }
@@ -213,6 +236,12 @@ function money(raw: unknown, fallback: number): number | null {
 function clampInt(raw: unknown, lo: number, hi: number, fallback: number) {
   const n = Math.round(Number(raw));
   return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback;
+}
+
+function rate(raw: unknown, fallback: number, hi: number): number | null {
+  if (raw === undefined || raw === '') return fallback;
+  const n = Math.round(Number(raw) * 100) / 100;
+  return Number.isFinite(n) && n >= 0 && n <= hi ? n : null;
 }
 
 /** hex / rgb() / a CSS colour word — enough to keep style="" safe */
@@ -282,10 +311,10 @@ const LEGACY_QUICK_AMOUNTS: AmountPreset[] = [500, 1000, 2000, 5000, 10000, 2500
 /** Withdrawal rules, before the line promising the money was dropped. */
 const LEGACY_WITHDRAW_RULES = [
   'নিজের নামে থাকা সঠিক অ্যাকাউন্ট নাম্বার দিন',
-  'এক রিকোয়েস্টে সর্বোচ্চ {max} তোলা যাবে',
-  '!এজেন্ট ক্যাশআউট চার্জ মোট ওয়ালেট ব্যালেন্সের উপর হিসাব করা হয়',
-  '!প্রতি ১,০০০ টাকায় {rate} চার্জ',
-  '!সম্পূর্ণ চার্জ একবারেই পরিশোধ করতে হবে',
+  'একবারে সর্বোচ্চ {max} উত্তোলন করা যাবে',
+  '!এজেন্ট ক্যাশআউট চার্জ আপনার মোট ওয়ালেট ব্যালেন্সের উপর হিসাব হয়',
+  '!প্রতি ৳১,০০০-এ {rate} চার্জ',
+  '!পুরো চার্জটি একবারেই দিতে হবে',
   'চার্জ যাচাই হলে {time} এর মধ্যে টাকা পাঠানো হবে',
 ].join('\n');
 

@@ -13,6 +13,7 @@ import { toTaka } from '@/lib/auth';
 import { money } from '@/lib/brand';
 import { readAccessToken, readSession, readStoredUser } from '@/lib/supabase';
 import {
+  calculateFeePaisa,
   fillTokens,
   isImageIcon,
   type WithdrawMethod,
@@ -27,6 +28,8 @@ type Raised = {
   amount: number;
   account: string;
   balance: number;
+  fee: number;
+  payout: number;
 };
 
 type Step = 'form' | 'summary' | 'done';
@@ -202,8 +205,13 @@ export default function WithdrawPage() {
     const next: Record<string, string> = {};
     if (!accountNo) next.account = walletsSupported ? 'Add an e-wallet first' : 'Enter an account number';
     const n = Number(amount);
+    const requestPaisa = Number.isFinite(n) ? Math.round(n * 100) : 0;
+    const feePaisa = calculateFeePaisa(requestPaisa, cfg);
     if (!Number.isFinite(n) || n < method.min) next.amount = `Minimum ${money(method.min)}`;
     else if (n > method.max) next.amount = `Up to ${money(method.max)} in a single request`;
+    if (feePaisa >= requestPaisa && requestPaisa > 0) {
+      next.amount = 'The configured fee is too high for this amount';
+    }
     if (session && n > available) {
       next.amount = waiting > 0
         ? `Available ${money(available)} — ${money(waiting)} is in a request still waiting`
@@ -245,6 +253,8 @@ export default function WithdrawPage() {
       amount: n,
       account: accountNo,
       balance,
+      fee: feePaisa,
+      payout: requestPaisa - feePaisa,
     });
     setStep('summary');
     window.scrollTo({ top: 0 });
@@ -262,7 +272,7 @@ export default function WithdrawPage() {
     // daily count from the cashier config, which the database cannot see.
     // The database then checks the password again, the hold/ban, bonus
     // turnover and the balance — so none of it rests on this screen.
-    let reply: { ok?: boolean; id?: number | null; message?: string; reason?: string } = {};
+    let reply: { ok?: boolean; id?: number | null; feeAmount?: number; payoutAmount?: number; message?: string; reason?: string } = {};
     try {
       const res = await fetch('/api/withdraw/request', {
         method: 'POST',
@@ -288,7 +298,9 @@ export default function WithdrawPage() {
     }
 
     const id = typeof reply.id === 'number' ? reply.id : null;
-    setRaised({ ...raised, id });
+    const fee = Number.isSafeInteger(reply.feeAmount) ? Number(reply.feeAmount) : raised.fee;
+    const payout = Number.isSafeInteger(reply.payoutAmount) ? Number(reply.payoutAmount) : raised.payout;
+    setRaised({ ...raised, id, fee, payout });
     setErr({});
     setPassword('');
     await refresh();
@@ -351,7 +363,7 @@ export default function WithdrawPage() {
           <h2>Request submitted!</h2>
           <p>
             Your request to send {money(raised.amount)} to {method.name} ({raised.account}) has been submitted.
-            {` Once an admin approves it, the money arrives within ${cfg.processingTime}.`}
+            {` The payout after fee is ${money(raised.payout)}. Once an admin approves it, the money arrives within ${cfg.processingTime}.`}
           </p>
           <button type="button" className="btn btn--gold" onClick={restart}>Another withdrawal</button>
           <div className="cz-done__links">
@@ -401,6 +413,15 @@ export default function WithdrawPage() {
 
           <div className="cz-label">উত্তোলনের পরিমাণ</div>
           <div className="cz-ro cz-ro--gold">{money(raised.amount)}</div>
+
+          {cfg.feeEnabled && raised.fee > 0 && (
+            <div className="cz-calc">
+              <b>Withdrawal fee summary</b>
+              <p><span>Requested amount</span><b>{money(raised.amount)}</b></p>
+              <p><span>Fee</span><b>{money(raised.fee)}</b></p>
+              <p className="cz-calc__total"><span>Net payout</span><b>{money(raised.payout)}</b></p>
+            </div>
+          )}
 
           {rules.length > 0 && (
             <div className="cz-rules">

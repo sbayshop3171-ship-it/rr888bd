@@ -43,8 +43,11 @@ type Row = {
   txn_id?: string | null;
   /** deposits, migration 005 */
   bonus_amount?: number | null;
+  fee_amount?: number | null;
+  net_amount?: number | null;
   /** withdrawals */
   account_no?: string | null;
+  payout_amount?: number | null;
   /** withdrawals, migration 006: the agent cash-out charge and its proof */
   charge_amount?: number | null;
   charge_channel_id?: string | null;
@@ -95,11 +98,13 @@ const BASE = 'id, channel_id, amount, state, admin_note, created_at';
    one answers the next select down rather than showing nothing */
 const TIERS = {
   deposits: [
+    `${BASE}, reviewed_at, sender_no, txn_id, fee_amount, net_amount, bonus_amount`,
     `${BASE}, reviewed_at, sender_no, txn_id, bonus_amount`,
     `${BASE}, reviewed_at, sender_no, txn_id`,
     BASE,
   ],
   withdrawals: [
+    `${BASE}, reviewed_at, account_no, fee_amount, payout_amount, charge_amount, charge_channel_id, charge_account_no, charge_trx_id, charge_paid_at`,
     `${BASE}, reviewed_at, account_no, charge_amount, charge_channel_id, charge_account_no, charge_trx_id, charge_paid_at`,
     `${BASE}, reviewed_at, account_no`,
     BASE,
@@ -234,6 +239,17 @@ export default function CashierHistory({
         const isDeposit = table === 'deposits';
         const done = r.state === 'approved';
         const note = remark(r.admin_note);
+        const effectiveFee = Number(r.fee_amount ?? 0) || Number(r.charge_amount ?? 0);
+        // New columns are NOT NULL with a zero default, so a legacy row can
+        // carry net_amount/payout_amount = 0 even though its real amount was
+        // the gross request. Treat zero as “not snapshotted yet”.
+        const storedNet = Number(r.net_amount ?? 0);
+        const storedPayout = Number(r.payout_amount ?? 0);
+        const netAmount = storedNet > 0
+          ? storedNet
+          : storedPayout > 0
+            ? storedPayout
+            : Number(r.amount) - effectiveFee;
         const copyable = (value: string | null | undefined) => (value ? (
           <>
             {value}
@@ -255,13 +271,14 @@ export default function CashierHistory({
                 <>
                   <div><dt>Sent from</dt><dd>{copyable(r.sender_no)}</dd></div>
                   <div><dt>TxnID</dt><dd>{copyable(r.txn_id)}</dd></div>
+                  {effectiveFee > 0 && <div><dt>Fee</dt><dd>{dash(effectiveFee)}</dd></div>}
                   <div><dt>Promotions</dt><dd>{dash(r.bonus_amount)}</dd></div>
                 </>
               ) : (
                 <>
                   <div><dt>Paid to account</dt><dd>{copyable(r.account_no)}</dd></div>
-                  <div><dt>Handling fee</dt><dd>{dash(r.charge_amount)}</dd></div>
-                  {Boolean(r.charge_amount) && (
+                  <div><dt>Fee</dt><dd>{dash(effectiveFee)}</dd></div>
+                  {effectiveFee > 0 && (
                     <>
                       <div><dt>Fee paid by</dt><dd>{r.charge_channel_id ? channelName(r.charge_channel_id) : '—'}</dd></div>
                       <div><dt>Fee sent to</dt><dd>{copyable(r.charge_account_no)}</dd></div>
@@ -281,10 +298,10 @@ export default function CashierHistory({
 
             <footer className="cr__figs">
               <div><b className="is-req">{money(toTaka(r.amount), 2)}</b><span>Request</span></div>
-              <div><b>{done ? money(toTaka(r.amount), 2) : '—'}</b><span>{isDeposit ? 'Received amount' : 'Paid amount'}</span></div>
+              <div><b>{done ? money(toTaka(netAmount), 2) : '—'}</b><span>{isDeposit ? 'Received amount' : 'Paid amount'}</span></div>
               {isDeposit
                 ? <div><b>{dash(r.bonus_amount)}</b><span>Bonus Amount</span></div>
-                : <div><b>{dash(r.charge_amount)}</b><span>Handling fee</span></div>}
+                : <div><b>{dash(effectiveFee)}</b><span>Fee</span></div>}
               <div>
                 <b className={`cr__state cr__state--${r.state}`}>{STATE_LABEL[r.state]}</b>
                 <span>Status</span>

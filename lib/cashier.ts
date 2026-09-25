@@ -24,6 +24,12 @@ export type CashierRow = {
   channelId: string;
   /** paisa */
   amount: number;
+  /** deposits: fee taken from the gross amount */
+  feeAmount?: number;
+  /** deposits: amount credited after the fee */
+  netAmount?: number;
+  /** withdrawals: amount paid after the fee */
+  payoutAmount?: number;
   state: RequestState;
   adminNote: string | null;
   createdAt: string;
@@ -125,7 +131,10 @@ export async function listCashier(
   const base = table === 'deposits'
     ? 'sender_no, txn_id'
     : 'account_no, user_phone, user_display_name, debited';
-  const withCharge = table === 'withdrawals'
+  const withFees = table === 'deposits'
+    ? `${base}, fee_amount, net_amount`
+    : `${base}, fee_amount, payout_amount`;
+  const withLegacyCharge = table === 'withdrawals'
     ? `${base}, charge_amount, charge_channel_id, charge_account_no, charge_trx_id, charge_paid_at`
     : base;
 
@@ -143,9 +152,11 @@ export async function listCashier(
     return query.returns<Record<string, unknown>[]>();
   };
 
-  let { data, error } = await run(withCharge);
-  if (error && withCharge !== base && /column|schema cache/i.test(error.message)) {
-    ({ data, error } = await run(base));
+  let data: Record<string, unknown>[] | null = null;
+  let error: { message: string } | null = null;
+  for (const extra of [withFees, withLegacyCharge, base]) {
+    ({ data, error } = await run(extra));
+    if (!error || !/column|schema cache/i.test(error.message)) break;
   }
   if (error) return { ok: false, reason: 'db-error', message: error.message };
 
@@ -508,6 +519,9 @@ function toCashierRow(row: Record<string, unknown>): CashierRow {
     playerNo: profile?.player_no == null ? null : Number(profile.player_no),
     channelId: String(row.channel_id),
     amount: Number(row.amount ?? 0),
+    feeAmount: row.fee_amount == null ? undefined : Number(row.fee_amount),
+    netAmount: row.net_amount == null ? undefined : Number(row.net_amount),
+    payoutAmount: row.payout_amount == null ? undefined : Number(row.payout_amount),
     state: row.state as RequestState,
     adminNote: (row.admin_note as string) ?? null,
     createdAt: String(row.created_at),

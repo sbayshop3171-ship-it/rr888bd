@@ -3,10 +3,9 @@
 import { useState } from 'react';
 import {
   bonusBadge,
-  CHARGE_BASIS_LABEL,
   PAY_TYPE_LABEL,
+  calculateFeePaisa,
   type AmountPreset,
-  type ChargeBasis,
   type CashierConfig,
   type DepositMethod,
   type PayType,
@@ -18,7 +17,7 @@ type Side = 'deposit' | 'withdraw';
 
 const ERROR_LABEL: Record<string, string> = {
   'invalid-method': 'A method name needs at least 2 characters.',
-  'invalid-amounts': 'Amount chips take numbers greater than 0 only.',
+  'invalid-amounts': 'Amount and fee values must be valid numbers within their limits.',
   'invalid-limit': 'Those limits are wrong — the minimum must be below the maximum.',
   'unknown-channel': 'Unknown payment channel.',
   'invalid-pattern': 'That TrxID format (regex) is not valid.',
@@ -56,9 +55,6 @@ const DEPOSIT_TEXTS: [keyof CashierConfig['deposit'], string, boolean][] = [
 ];
 
 const WITHDRAW_TEXTS: [keyof CashierConfig['withdraw'], string, boolean][] = [
-  ['chargeTitle', 'Withdrawal charge card heading (leave blank to hide the card)', false],
-  ['chargeText', 'Charge explanation — {rate} is filled in with the charge per ৳1,000', true],
-  ['chargeWarning', 'What happens if the charge is unpaid — red warning', true],
   ['processingTime', 'Withdrawal time (e.g. 24 hours)', false],
   ['walletsTitle', 'Saved wallets section heading', false],
   ['reminder', 'Friendly reminder', true],
@@ -67,27 +63,10 @@ const WITHDRAW_TEXTS: [keyof CashierConfig['withdraw'], string, boolean][] = [
   ['passwordLabel', 'Password field label', false],
   ['passwordHint', 'Hint under the password field', false],
   ['note', 'Note under the button', true],
-];
-
-/** Step 2 (the summary the player confirms) and step 3 (paying the charge to
-    an agent number) — kept apart from the plain withdraw copy so the admin
-    form does not read as one long wall of inputs. */
-const CHARGE_TEXTS: [keyof CashierConfig['withdraw'], string, boolean][] = [
-  ['summaryTitle', 'Summary screen heading', false],
-  ['summaryWarning', 'Red warning above the summary', true],
-  ['chargeLabel', 'Label above the charge figure', false],
+  ['summaryTitle', 'Withdrawal review heading', false],
   ['rulesTitle', 'Rules box heading', false],
-  ['rules', 'Rules — one per line. Start a line with ! to show it in red. {rate} {max} {min} {time} {charge} {balance} {amount} are filled in', true],
-  ['applyLabel', 'Summary button text', false],
-  ['payTitle', 'Pay-the-charge screen heading', false],
-  ['payWarning', 'Red line at the top of the pay-the-charge screen', true],
-  ['agentNote', 'Small line under the agent number', false],
-  ['chargeExactNote', 'Small line under the charge figure', false],
-  ['guideTitle', 'Instructions box heading', false],
-  ['guideLines', 'Instructions — one point per line ({charge} is filled in)', true],
-  ['chargeTrxLabel', 'Charge TrxID input label', false],
-  ['chargeTrxPlaceholder', 'Charge TrxID input placeholder', false],
-  ['chargeCaution', 'Caution at the bottom of the charge screen', true],
+  ['rules', 'Rules — one per line. Start a line with ! to show it in red.', true],
+  ['applyLabel', 'Submit button text', false],
 ];
 
 const blankDeposit = (channelId: string): DepositMethod => ({
@@ -98,6 +77,50 @@ const blankDeposit = (channelId: string): DepositMethod => ({
 const blankWithdraw = (channelId: string): WithdrawMethod => ({
   id: '', name: '', channelId, icon: '💳', color: '#0f766e', min: 500, max: 50000, accountHint: '01XXXXXXXXX', active: true,
 });
+
+function FeeSettingsCard({
+  side,
+  enabled,
+  percent,
+  fixed,
+  busy,
+  onChange,
+}: {
+  side: 'Deposit' | 'Withdraw';
+  enabled: boolean;
+  percent: number;
+  fixed: number;
+  busy: boolean;
+  onChange: (patch: { feeEnabled?: boolean; feePercent?: number; feeFixed?: number }) => void;
+}) {
+  const sample = calculateFeePaisa(100_000, { feeEnabled: true, feePercent: percent, feeFixed: fixed }) / 100;
+  return (
+    <div className="adm__card">
+      <h2 className="adm__cardh">{side} Fee</h2>
+      <div className="adm__formgrid">
+        <label className="adm__f">
+          <span>Automatic fee</span>
+          <select value={enabled ? '1' : '0'} disabled={busy} onChange={(e) => onChange({ feeEnabled: e.target.value === '1' })}>
+            <option value="1">On</option>
+            <option value="0">Off</option>
+          </select>
+        </label>
+        <label className="adm__f">
+          <span>Percentage (%)</span>
+          <input type="number" min={0} max={100} step="0.01" value={Number.isFinite(percent) ? percent : ''} disabled={busy} onChange={(e) => onChange({ feePercent: Number(e.target.value) })} />
+        </label>
+        <label className="adm__f">
+          <span>Fixed price (৳)</span>
+          <input type="number" min={0} max={100000000} step="0.01" value={Number.isFinite(fixed) ? fixed : ''} disabled={busy} onChange={(e) => onChange({ feeFixed: Number(e.target.value) })} />
+        </label>
+      </div>
+      <p className="adm__hint">
+        {enabled ? `When enabled, ৳1,000 uses ৳${sample.toFixed(2)} fee (${percent}% + ৳${fixed.toFixed(2)} fixed).` : 'Fee is disabled. Players pay/receive the full amount.'}
+        {side === 'Deposit' ? ' The fee is deducted before wallet credit.' : ' The request holds the gross amount and pays the net amount after this fee.'}
+      </p>
+    </div>
+  );
+}
 
 export default function CashierConfigControl({ initial, channels }: { initial: CashierConfig; channels: Channel[] }) {
   const [saved, setSaved] = useState(initial);
@@ -271,6 +294,15 @@ export default function CashierConfigControl({ initial, channels }: { initial: C
             <p className="adm__hint">They are sorted low to high on save. A blank badge is not shown.</p>
           </div>
 
+          <FeeSettingsCard
+            side="Deposit"
+            enabled={form.deposit.feeEnabled}
+            percent={form.deposit.feePercent}
+            fixed={form.deposit.feeFixed}
+            busy={busy}
+            onChange={setDep}
+          />
+
           <div className="adm__card">
             <h2 className="adm__cardh">Copy &amp; Instructions</h2>
             <div className="adm__formgrid">
@@ -342,29 +374,17 @@ export default function CashierConfigControl({ initial, channels }: { initial: C
                 <span>Max saved wallets per method</span>
                 <input type="number" min={1} max={20} value={num(form.withdraw.maxWallets)} disabled={busy} onChange={(e) => setWd({ maxWallets: Number(e.target.value) })} />
               </label>
-              <label className="adm__f">
-                <span>Withdrawal charge — per ৳1,000 (৳, 0 = no charge)</span>
-                <input type="number" min={0} max={1000} value={num(form.withdraw.chargePerThousand)} disabled={busy} onChange={(e) => setWd({ chargePerThousand: Number(e.target.value) })} />
-              </label>
-              <label className="adm__f">
-                <span>What the charge is calculated on</span>
-                <select value={form.withdraw.chargeBasis} disabled={busy} onChange={(e) => setWd({ chargeBasis: e.target.value as ChargeBasis })}>
-                  {(Object.keys(CHARGE_BASIS_LABEL) as ChargeBasis[]).map((b) => (
-                    <option key={b} value={b}>{CHARGE_BASIS_LABEL[b]}</option>
-                  ))}
-                </select>
-              </label>
             </div>
-            <p className="adm__hint">
-              The charge scales with the amount — ৳{form.withdraw.chargePerThousand} per ৳1,000,
-              so ৳{form.withdraw.chargePerThousand} on ৳1,000 and
-              ৳{form.withdraw.chargePerThousand * 5} on ৳5,000. Picking “{CHARGE_BASIS_LABEL[form.withdraw.chargeBasis]}”
-              means it is worked out {form.withdraw.chargeBasis === 'balance'
-                ? 'on the player’s whole wallet balance, whatever they withdraw'
-                : 'on the amount they are withdrawing only'}. Set it to 0 and the charge step
-              disappears entirely — the request is submitted straight away.
-            </p>
           </div>
+
+          <FeeSettingsCard
+            side="Withdraw"
+            enabled={form.withdraw.feeEnabled}
+            percent={form.withdraw.feePercent}
+            fixed={form.withdraw.feeFixed}
+            busy={busy}
+            onChange={setWd}
+          />
 
           <div className="adm__card">
             <h2 className="adm__cardh">Copy</h2>
@@ -380,25 +400,6 @@ export default function CashierConfigControl({ initial, channels }: { initial: C
             </div>
           </div>
 
-          <div className="adm__card">
-            <h2 className="adm__cardh">Summary &amp; pay-the-charge screens</h2>
-            <p className="adm__hint" style={{ marginTop: 0 }}>
-              After the request the player sees two screens — a summary of the charge, then the
-              page telling them which agent number to send it to. Agent numbers come from
-              the “Agent” kind under <b> Admin → Payments</b>, so at least one agent number
-              has to be active there.
-            </p>
-            <div className="adm__formgrid">
-              {CHARGE_TEXTS.map(([key, label, long]) => (
-                <label className={`adm__f${long ? ' adm__f--wide' : ''}`} key={key}>
-                  <span>{label}</span>
-                  {long
-                    ? <textarea value={String(form.withdraw[key])} disabled={busy} onChange={(e) => setWd({ [key]: e.target.value })} />
-                    : <input value={String(form.withdraw[key])} disabled={busy} onChange={(e) => setWd({ [key]: e.target.value })} />}
-                </label>
-              ))}
-            </div>
-          </div>
         </>
       )}
 

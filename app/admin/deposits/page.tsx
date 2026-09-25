@@ -1,5 +1,6 @@
 import NoAccess from '@/components/admin/NoAccess';
 import CashierControl from '@/components/admin/CashierControl';
+import Link from 'next/link';
 import { getCurrentAdminSession } from '@/lib/admin-auth-next';
 import { can } from '@/lib/admin-roles';
 import { listCashier } from '@/lib/cashier';
@@ -32,7 +33,8 @@ export default async function AdminDeposits() {
       <p className="adm__sub">
         Approving one credits the player’s wallet and writes a ledger entry — both
         together, with no way for one to happen without the other. Pressing approve twice
-        on the same request still only pays once.
+        on the same request still only pays once. Configure deposit percentage/fixed fees
+        in <Link href="/admin/cashier">Cashier settings</Link>.
       </p>
       <CashierControl
         table="deposits"

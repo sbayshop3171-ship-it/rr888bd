@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       try {
         await connection.beginTransaction();
         const [rows] = await connection.execute(
-          'SELECT id, user_id, amount, state, created_at FROM deposits WHERE id = ? FOR UPDATE',
+          'SELECT id, user_id, amount, fee_amount, net_amount, state, created_at FROM deposits WHERE id = ? FOR UPDATE',
           [id],
         );
         const deposit = (rows as Record<string, unknown>[])[0];
@@ -97,6 +97,13 @@ export async function POST(req: Request) {
           if (!Number.isSafeInteger(amount) || amount <= 0) {
             throw new Error(`deposit ${id} has invalid amount`);
           }
+          const storedFee = Number(deposit.fee_amount ?? 0);
+          const storedNet = Number(deposit.net_amount ?? 0);
+          const feeAmount = Number.isSafeInteger(storedFee) && storedFee >= 0 ? storedFee : 0;
+          const netAmount = storedNet > 0 ? storedNet : amount - feeAmount;
+          if (!Number.isSafeInteger(netAmount) || netAmount <= 0 || netAmount > amount) {
+            throw new Error(`deposit ${id} has invalid fee or net amount`);
+          }
           const reference = `deposit:${id}`;
           const [ledgerRows] = await connection.execute(
             'SELECT id FROM transactions WHERE user_id = ? AND (reference = ? OR ref = ?) LIMIT 1',
@@ -112,7 +119,7 @@ export async function POST(req: Request) {
           );
           const wallet = (walletRows as Record<string, unknown>[])[0];
           const before = Number(wallet?.balance ?? 0);
-          const after = before + amount;
+          const after = before + netAmount;
           if (!Number.isSafeInteger(before) || !Number.isSafeInteger(after)) {
             throw new Error(`deposit ${id} would overflow wallet balance`);
           }
@@ -125,14 +132,18 @@ export async function POST(req: Request) {
           } else {
             await connection.execute(
               'INSERT INTO wallets (user_id, balance, bonus_balance, turnover_need, turnover_done) VALUES (?, ?, 0, 0, 0)',
-              [depositUserId, amount],
+              [depositUserId, netAmount],
             );
           }
+          await connection.execute(
+            'UPDATE deposits SET fee_amount = ?, net_amount = ? WHERE id = ?',
+            [feeAmount, netAmount, id],
+          );
           await connection.execute(
             `INSERT INTO transactions
              (user_id, type, kind, amount, balance_before, balance_after, reference, ref, status, notes)
              VALUES (?, 'deposit', 'deposit', ?, ?, ?, ?, ?, 'completed', ?)`,
-            [depositUserId, amount, before, after, reference, reference, `Deposit #${id}`],
+            [depositUserId, netAmount, before, after, reference, reference, `Deposit #${id}${feeAmount ? ` (fee ${feeAmount} paisa)` : ''}`],
           );
           await unlockAfterVerification(connection, String(depositUserId));
         }
@@ -150,7 +161,7 @@ export async function POST(req: Request) {
     return json({ message: `Unsupported RPC: ${String(fn ?? '')}` }, 400);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Database error';
-    const expected = /wrong password|insufficient balance|already|not pending|wallet not found|invalid transaction|invalid user_id|user not found|invalid amount|overflow wallet|turnover|reject this request/i.test(message);
+    const expected = /wrong password|insufficient balance|already|not pending|wallet not found|invalid transaction|invalid withdrawal|invalid user_id|user not found|invalid amount|invalid fee|invalid net|overflow wallet|turnover|reject this request/i.test(message);
     return json({ message }, expected ? 400 : 500);
   }
 }
@@ -265,9 +276,13 @@ async function requestWithdrawal(
   const userId = String(args.p_user ?? '');
   const channel = String(args.p_channel ?? '').slice(0, 64);
   const amount = Number(args.p_amount);
+  const feeAmount = Number(args.p_fee_amount ?? 0);
+  const payoutAmount = Number(args.p_payout_amount ?? amount - feeAmount);
   const accountNo = String(args.p_account_no ?? '').replace(/[\s-]+/g, '').slice(0, 100);
   const password = String(args.p_password ?? '');
-  if (!/^\d+$/.test(userId) || !channel || !accountNo || !Number.isSafeInteger(amount) || amount <= 0) {
+  if (!/^\d+$/.test(userId) || !channel || !accountNo || !Number.isSafeInteger(amount) || amount <= 0
+      || !Number.isSafeInteger(feeAmount) || feeAmount < 0 || feeAmount >= amount
+      || !Number.isSafeInteger(payoutAmount) || payoutAmount !== amount - feeAmount) {
     throw new Error('Invalid withdrawal request');
   }
 
@@ -295,9 +310,9 @@ async function requestWithdrawal(
     await connection.execute('UPDATE wallets SET balance = ? WHERE user_id = ?', [after, userId]);
     await connection.execute(
       `INSERT INTO withdrawals
-       (id, user_id, channel_id, amount, state, account_no, user_phone, user_display_name, debited)
-       VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, 1)`,
-      [id, userId, channel, amount, accountNo, String(user.phone ?? ''), user.display_name == null ? null : String(user.display_name)] as (string | number | null)[],
+       (id, user_id, channel_id, amount, fee_amount, payout_amount, state, account_no, user_phone, user_display_name, debited)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, 1)`,
+      [id, userId, channel, amount, feeAmount, payoutAmount, accountNo, String(user.phone ?? ''), user.display_name == null ? null : String(user.display_name)] as (string | number | null)[],
     );
     await connection.execute(
       `INSERT INTO transactions (user_id, type, kind, amount, balance_before, balance_after, reference, ref, status)

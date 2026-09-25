@@ -14,6 +14,7 @@ import {
   HOWTO_TILES,
   PAY_TYPE_KINDS,
   PAY_TYPE_LABEL,
+  calculateFeePaisa,
   fillTokens,
   bonusBadge,
   isImageIcon,
@@ -138,6 +139,9 @@ export default function DepositPage() {
 
   const n = Number(amount);
   const amountOk = Boolean(method) && Number.isFinite(n) && n >= (method?.min ?? 0) && n <= (method?.max ?? 0);
+  const grossPaisa = amountOk ? toPaisa(n) : 0;
+  const feePaisa = calculateFeePaisa(grossPaisa, cfg);
+  const netPaisa = grossPaisa - feePaisa;
   const trxPattern = useMemo(() => {
     try { return cfg.trxPattern ? new RegExp(cfg.trxPattern) : null; } catch { return null; }
   }, [cfg.trxPattern]);
@@ -175,6 +179,10 @@ export default function DepositPage() {
     if (!method) return;
     if (!amountOk) {
       setErr(`Enter between ${money(method.min)} and ${money(method.max)} for ${method.name}`);
+      return;
+    }
+    if (feePaisa >= grossPaisa) {
+      setErr('The configured deposit fee is greater than this amount. Enter a larger amount or contact support.');
       return;
     }
     if (ready && !session) {
@@ -320,6 +328,15 @@ export default function DepositPage() {
 
         <div className="cz-pay">
           {cfg.stepWarning && <p className="cz-warn">{cfg.stepWarning}</p>}
+
+          {cfg.feeEnabled && feePaisa > 0 && (
+            <div className="cz-calc">
+              <b>Deposit fee summary</b>
+              <p><span>Deposit amount</span><b>{money(toPaisa(n))}</b></p>
+              <p><span>Fee</span><b>{money(feePaisa)}</b></p>
+              <p className="cz-calc__total"><span>Wallet credit</span><b>{money(netPaisa)}</b></p>
+            </div>
+          )}
 
           <div className="cz-gate" style={{ background: method.color }}>
             <MethodIcon method={method} size={40} />

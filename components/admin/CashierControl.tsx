@@ -40,7 +40,6 @@ export default function CashierControl({
   const [rows, setRows] = useState(initialRows);
   const [state, setState] = useState<RequestState | 'all'>('pending');
   const [notes, setNotes] = useState<Record<number, string>>({});
-  const [trxIds, setTrxIds] = useState<Record<number, string>>({});
   /** the request whose lock box is open, and the reason typed into it */
   const [lockFor, setLockFor] = useState(0);
   const [reason, setReason] = useState('');
@@ -90,7 +89,7 @@ export default function CashierControl({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           table, id, decision, note: notes[id] ?? '', reason: decision === 'lock' ? reason : '',
-          trxId: decision === 'approve' ? trxIds[id] ?? '' : '', state, search: applied,
+          state, search: applied,
         }),
       });
       const data = (await res.json()) as
@@ -103,7 +102,6 @@ export default function CashierControl({
       }
       setRows(data.rows);
       setNotes((n) => ({ ...n, [id]: '' }));
-      setTrxIds((n) => ({ ...n, [id]: '' }));
       if (decision === 'lock') {
         setLockFor(0);
         setReason('');
@@ -170,7 +168,7 @@ export default function CashierControl({
         {applied && (
           <p className="adm__hint">
             Showing only requests matching “{applied}”
-            {isDeposit ? ' (player ID, phone or TxnID)' : ' (player ID, phone or charge TrxID)'}. The tabs below keep this filter.
+            {isDeposit ? ' (player ID, phone or TxnID)' : ' (player ID or phone)'}. The tabs below keep this filter.
           </p>
         )}
       </form>
@@ -197,7 +195,7 @@ export default function CashierControl({
             <tr>
               <th>#</th><th>Player</th><th>Channel</th><th>Amount</th>
               <th>{isDeposit ? 'Sender / TxnID' : 'Paid to account'}</th>
-              {!isDeposit && <th>Charge / TrxID</th>}
+              {!isDeposit && <th>Fee / Payout</th>}
               <th>Time</th><th>Status</th><th></th>
             </tr>
           </thead>
@@ -220,7 +218,14 @@ export default function CashierControl({
                       {r.displayName && <div className="adm__muted" style={{ fontSize: 11 }}>{r.displayName}</div>}
                     </td>
                     <td>{r.channelId}</td>
-                    <td><b style={{ color: 'var(--gold)' }}>{money(toTaka(r.amount))}</b></td>
+                    <td>
+                      <b style={{ color: 'var(--gold)' }}>{money(toTaka(r.amount))}</b>
+                      {isDeposit && (r.feeAmount ?? 0) > 0 && (
+                        <div className="adm__muted" style={{ fontSize: 11 }}>
+                          Fee {money(toTaka(r.feeAmount ?? 0))} · Credit {money(toTaka(r.netAmount ?? r.amount))}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       {isDeposit ? (
                         <>
@@ -233,23 +238,16 @@ export default function CashierControl({
                     </td>
                     {!isDeposit && (
                       <td>
-                        {r.chargeAmount ? (
-                          <>
-                            <b style={{ color: 'var(--gold)' }}>{money(toTaka(r.chargeAmount))}</b>
-                            {r.chargeTrxId ? (
-                              <div style={{ fontSize: 11 }}>
-                                <code>{r.chargeTrxId}</code>
-                                {r.chargeAccountNo && (
-                                  <div className="adm__muted">{r.chargeChannelId} · {r.chargeAccountNo}</div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="adm__miss" style={{ fontSize: 11 }}>Charge not paid</div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="adm__muted">—</span>
-                        )}
+                        <b style={{ color: 'var(--gold)' }}>
+                          Fee {money(toTaka(r.feeAmount ?? r.chargeAmount ?? 0))}
+                        </b>
+                        <div className="adm__muted" style={{ fontSize: 11 }}>
+                          Payout {money(toTaka(
+                            (r.payoutAmount ?? 0) > 0
+                              ? r.payoutAmount!
+                              : r.amount - (r.feeAmount ?? r.chargeAmount ?? 0),
+                          ))}
+                        </div>
                       </td>
                     )}
                     <td className="adm__muted">{when(r.createdAt)}</td>
@@ -304,15 +302,6 @@ export default function CashierControl({
                             disabled={busy}
                             onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value }))}
                           />
-                          {!isDeposit && (
-                            <input
-                              className="adm__mini"
-                              placeholder="Approval TrxID"
-                              value={trxIds[r.id] ?? ''}
-                              disabled={busy}
-                              onChange={(e) => setTrxIds((n) => ({ ...n, [r.id]: e.target.value }))}
-                            />
-                          )}
                           <div className="adm__rowacts">
                             <button type="button" className="btn btn--gold" disabled={busy}
                                     onClick={() => void review(r.id, 'approve')}>

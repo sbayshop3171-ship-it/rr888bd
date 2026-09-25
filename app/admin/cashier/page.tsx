@@ -20,9 +20,10 @@ export default async function AdminCashier() {
       <h1 className="adm__h1">Cashier</h1>
       <p className="adm__sub">
         Everything the player sees on the deposit and withdraw pages — methods, bonus
-        labels, amount chips, instructions, warnings, success messages — is set here, and
-        goes live on save. The receiving numbers live in the “Payments” tab; each method
-        uses a number from one of those channels.
+        labels, amount chips, instructions, warnings, success messages, and separate
+        percentage/fixed fees with an on/off switch — is set here and goes live on save.
+        Deposit fees reduce wallet credit; withdrawal fees reduce payout while the gross
+        request is held. The receiving numbers live in the “Payments” tab.
       </p>
       <CashierConfigControl
         initial={await getCashierConfig()}

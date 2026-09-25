@@ -65,6 +65,14 @@ export type AmountPreset = {
   bonusLabel: string;
 };
 
+/** Operator fee settings. `feeFixed` is in taka; all money calculations use
+    paisa at the database boundary. Percentage and fixed fee are additive. */
+export type FeeSettings = {
+  feeEnabled: boolean;
+  feePercent: number;
+  feeFixed: number;
+};
+
 /** What the per-1,000 charge is worked out on: the player's whole wallet, or
     only the amount they asked for. */
 export type ChargeBasis = 'balance' | 'amount';
@@ -124,6 +132,10 @@ export type CashierConfig = {
         picked method's limits; a blank title hides the whole block. */
     noticeTitle: string;
     noticeText: string;
+    /** applied to the gross amount when the admin enables deposit fees */
+    feeEnabled: boolean;
+    feePercent: number;
+    feeFixed: number;
   };
   withdraw: {
     methods: WithdrawMethod[];
@@ -172,6 +184,10 @@ export type CashierConfig = {
     chargeTrxLabel: string;
     chargeTrxPlaceholder: string;
     chargeCaution: string;
+    /** applied to the requested amount when the admin enables withdrawal fees */
+    feeEnabled: boolean;
+    feePercent: number;
+    feeFixed: number;
   };
   updatedAt: string | null;
 };
@@ -272,6 +288,9 @@ export const CASHIER_DEFAULTS: CashierConfig = {
     promoText: '',
     noticeTitle: 'সর্বনিম্ন ডিপোজিট {min}',
     noticeText: 'একবারে {min} টাকার কম পাঠাবেন না। এর চেয়ে কম পাঠালে সেই টাকা অ্যাকাউন্টে যোগ করা হবে না এবং ফেরতও দেওয়া হবে না। একবারে সর্বোচ্চ {max} পাঠানো যাবে।',
+    feeEnabled: false,
+    feePercent: 0,
+    feeFixed: 0,
   },
   withdraw: {
     methods: WITHDRAW_CHANNELS.map((c) => ({
@@ -294,25 +313,25 @@ export const CASHIER_DEFAULTS: CashierConfig = {
     amountLabel: 'Withdrawal Amount',
     passwordLabel: 'Transaction Password',
     passwordHint: 'Enter your login password',
-    note: 'The amount is deducted from your balance when you send the handling-fee TrxID — until then nothing is taken (with no fee, it is deducted when an admin approves). It is sent once approved, and anything deducted comes back if the request is rejected.',
+    note: 'The requested amount is held from your balance immediately. The net amount is sent after approval, and the full held amount is refunded if the request is rejected.',
     chargePerThousand: 44,
     chargeBasis: 'balance',
     chargeTitle: 'Withdrawal Charge',
     chargeText: 'An agent cash-out charge of {rate} per ৳1,000 applies.',
     chargeWarning: 'The withdrawal is not released until the charge is paid.',
     summaryTitle: 'উত্তোলনের বিবরণ',
-    summaryWarning: 'চার্জটি শুধুমাত্র আমাদের দেওয়া এজেন্ট নাম্বারেই পাঠাবেন, নাহলে উত্তোলনটি হবে না।',
+    summaryWarning: 'আপনার অনুরোধ জমা হলে মোট অ্যামাউন্টটি সাময়িকভাবে হোল্ড হবে। অনুমোদনের পর ফি বাদে নেট অ্যামাউন্ট পাঠানো হবে।',
     chargeLabel: 'এজেন্ট ক্যাশআউট চার্জ',
     rulesTitle: 'উত্তোলনের নিয়ম',
     rules: [
       'নিজের নামে থাকা সঠিক অ্যাকাউন্ট নাম্বার দিন',
       'একবারে সর্বোচ্চ {max} উত্তোলন করা যাবে',
-      '!এজেন্ট ক্যাশআউট চার্জ আপনার মোট ওয়ালেট ব্যালেন্সের উপর হিসাব হয়',
-      '!প্রতি ৳১,০০০-এ {rate} চার্জ',
-      '!পুরো চার্জটি একবারেই দিতে হবে',
-      'চার্জ যাচাই হলে {time} এর মধ্যে টাকা পাঠানো হবে',
+      'রিকোয়েস্ট জমা দিলে মোট অ্যামাউন্টটি ব্যালেন্স থেকে হোল্ড হবে',
+      '!ফি চালু থাকলে শতাংশ ও ফিক্সড ফি বাদ দিয়ে নেট অ্যামাউন্ট পাঠানো হবে',
+      '!রিকোয়েস্ট রিজেক্ট হলে পুরো হোল্ড অ্যামাউন্ট ফেরত যাবে',
+      'অনুমোদনের পর {time} এর মধ্যে টাকা পাঠানো হবে',
     ].join('\n'),
-    applyLabel: 'Apply for withdrawal',
+    applyLabel: 'Submit withdrawal request',
     payTitle: 'চার্জ পরিশোধ করুন',
     payWarning: 'নিচের এজেন্ট নাম্বারে চার্জটি পাঠিয়ে TrxID দিন — তবেই উত্তোলনটি প্রসেস হবে।',
     agentNote: 'এই নাম্বারে শুধুমাত্র ক্যাশআউট গ্রহণ করা হয়',
@@ -325,6 +344,9 @@ export const CASHIER_DEFAULTS: CashierConfig = {
     chargeTrxLabel: 'চার্জ পেমেন্টের TrxID নাম্বারটি লিখুন',
     chargeTrxPlaceholder: 'TrxID অবশ্যই পূরণ করতে হবে!',
     chargeCaution: 'লেনদেন আইডি সঠিক হতে হবে, নাহলে উত্তোলনটি বাতিল হয়ে যাবে।',
+    feeEnabled: false,
+    feePercent: 0,
+    feeFixed: 0,
   },
   updatedAt: null,
 };
@@ -365,6 +387,20 @@ export function chargeBase(basis: ChargeBasis, amount: number, balance: number) 
 export function withdrawCharge(amount: number, perThousand: number) {
   if (!Number.isFinite(amount) || amount <= 0 || perThousand <= 0) return 0;
   return Math.ceil((amount * perThousand) / 1000);
+}
+
+/** Calculate the fee in paisa. The setting is deliberately passed in rather
+    than read from storage so the request can freeze the exact fee it showed
+    the player, even if an admin changes the setting while it is pending. */
+export function calculateFeePaisa(amountPaisa: number, settings: FeeSettings): number {
+  if (!settings.feeEnabled || !Number.isSafeInteger(amountPaisa) || amountPaisa <= 0) return 0;
+  const percent = Number.isFinite(settings.feePercent)
+    ? Math.min(100, Math.max(0, settings.feePercent))
+    : 0;
+  const fixedPaisa = Number.isFinite(settings.feeFixed)
+    ? Math.max(0, Math.round(settings.feeFixed * 100))
+    : 0;
+  return Math.round((amountPaisa * percent) / 100) + fixedPaisa;
 }
 
 /** Fill {min}, {max}, {rate}… in an admin-written line. A token the caller
