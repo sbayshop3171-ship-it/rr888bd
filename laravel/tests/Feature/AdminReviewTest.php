@@ -84,7 +84,7 @@ class AdminReviewTest extends TestCase
         $this->assertDatabaseCount('transactions', 1);
     }
 
-    public function test_approving_a_withdrawal_debits_the_wallet(): void
+    public function test_approving_a_withdrawal_keeps_the_balance_already_debited(): void
     {
         $withdrawal = Withdrawal::create([
             'user_id' => $this->player->id,
@@ -93,11 +93,38 @@ class AdminReviewTest extends TestCase
             'account_no' => '01712345678',
         ]);
 
+        $this->player->wallet()->update(['balance' => 300_000]);
+
         $this->actingAs($this->admin)
             ->patch("/admin/withdrawals/{$withdrawal->id}", ['state' => 'approved']);
 
         $this->assertSame(300_000, $this->player->wallet->fresh()->balance);
         $this->assertSame('approved', $withdrawal->fresh()->state);
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
+    public function test_rejecting_a_withdrawal_refunds_the_already_debited_balance(): void
+    {
+        $withdrawal = Withdrawal::create([
+            'user_id' => $this->player->id,
+            'channel_id' => 'bkash',
+            'amount' => 200_000,
+            'account_no' => '01712345678',
+            'state' => 'pending',
+        ]);
+
+        $this->player->wallet()->update(['balance' => 300_000]);
+
+        $this->actingAs($this->admin)
+            ->patch("/admin/withdrawals/{$withdrawal->id}", ['state' => 'rejected']);
+
+        $this->assertSame(500_000, $this->player->wallet->fresh()->balance);
+        $this->assertSame('rejected', $withdrawal->fresh()->state);
+        $this->assertDatabaseHas('transactions', [
+            'user_id' => $this->player->id,
+            'kind' => 'adjustment',
+            'amount' => 200_000,
+        ]);
     }
 
     public function test_a_withdrawal_larger_than_the_balance_cannot_be_approved(): void

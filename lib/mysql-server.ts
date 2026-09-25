@@ -29,6 +29,16 @@ export function resolveMysqlConfig(): MysqlConfig {
   return { host, port, user, password, database };
 }
 
+/** Native MySQL user IDs are positive safe integers. Keep this conversion at
+    the database boundary so a payment channel/method name can never be used
+    as a wallet or ledger user_id. */
+export function parseMysqlUserId(value: unknown): number | null {
+  const text = String(value ?? '').trim();
+  if (!/^[1-9]\d*$/.test(text)) return null;
+  const id = Number(text);
+  return Number.isSafeInteger(id) ? id : null;
+}
+
 export async function getMysqlPool() {
   const config = resolveMysqlConfig();
   const poolKey = `${config.host}:${config.port}:${config.user}:${config.database}`;
@@ -191,10 +201,10 @@ async function ensureMysqlSchemaOnce() {
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS deposits (
-        id VARCHAR(255) NOT NULL,
-        user_id VARCHAR(255) NOT NULL,
+        id BIGINT UNSIGNED NOT NULL,
+        user_id BIGINT UNSIGNED NOT NULL,
         channel_id VARCHAR(64) DEFAULT NULL,
-        amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+        amount BIGINT NOT NULL DEFAULT 0,
         state ENUM('pending', 'approved', 'rejected', 'cancelled') NOT NULL DEFAULT 'pending',
         status ENUM('pending', 'approved', 'rejected', 'cancelled') NOT NULL DEFAULT 'pending',
         admin_note TEXT DEFAULT NULL,
@@ -215,10 +225,10 @@ async function ensureMysqlSchemaOnce() {
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS withdrawals (
-        id VARCHAR(255) NOT NULL,
-        user_id VARCHAR(255) NOT NULL,
+        id BIGINT UNSIGNED NOT NULL,
+        user_id BIGINT UNSIGNED NOT NULL,
         channel_id VARCHAR(64) DEFAULT NULL,
-        amount DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+        amount BIGINT NOT NULL DEFAULT 0,
         state ENUM('pending', 'approved', 'rejected', 'cancelled') NOT NULL DEFAULT 'pending',
         status ENUM('pending', 'approved', 'rejected', 'cancelled') NOT NULL DEFAULT 'pending',
         admin_note TEXT DEFAULT NULL,
@@ -322,11 +332,14 @@ async function ensureMysqlSchemaOnce() {
 
     await ensureColumn('deposits', 'channel_id', 'VARCHAR(64)', 'NULL', true);
     await ensureColumn('deposits', 'state', "ENUM('pending','approved','rejected','cancelled')", "'pending'", false);
+    await ensureColumn('deposits', 'status', "ENUM('pending','approved','rejected','cancelled')", "'pending'", false);
     await ensureColumn('deposits', 'admin_note', 'TEXT', 'NULL', true);
     await ensureColumn('deposits', 'sender_no', 'VARCHAR(30)', 'NULL', true);
     await ensureColumn('deposits', 'txn_id', 'VARCHAR(255)', 'NULL', true);
     await ensureColumn('deposits', 'method_id', 'VARCHAR(100)', 'NULL', true);
+    await ensureColumn('deposits', 'bonus_amount', 'BIGINT', '0', false);
     await ensureColumn('deposits', 'reviewed_at', 'TIMESTAMP', 'NULL', true);
+    await ensureColumn('deposits', 'updated_at', 'TIMESTAMP', 'CURRENT_TIMESTAMP', false);
 
     await ensureColumn('withdrawals', 'channel_id', 'VARCHAR(64)', 'NULL', true);
     await ensureColumn('withdrawals', 'state', "ENUM('pending','approved','rejected','cancelled')", "'pending'", false);

@@ -139,7 +139,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const authSession = storedSession ?? (token ? { user: { id: String((storedUser as any)?.id ?? ''), email: (storedUser as any)?.email ?? null, created_at: (storedUser as any)?.created_at ?? new Date().toISOString() } } : null);
+    const fallbackUserId = String((storedUser as any)?.id ?? '');
+    const authSession = storedSession ?? (fallbackUserId || token
+      ? {
+          user: {
+            id: fallbackUserId || String((storedUser as any)?.user?.id ?? ''),
+            email: (storedUser as any)?.email ?? (storedUser as any)?.user?.email ?? null,
+            created_at: (storedUser as any)?.created_at ?? (storedUser as any)?.user?.created_at ?? new Date().toISOString(),
+          },
+        }
+      : null);
     if (authSession) {
       setSession(authSession);
       await load(authSession.user.id);

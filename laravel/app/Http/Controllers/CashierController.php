@@ -116,20 +116,22 @@ class CashierController extends Controller
             ]);
         }
 
-        // pending withdrawals already claim part of the balance
+        // The request debits immediately so the same money cannot be withdrawn again.
         $held = Withdrawal::where('user_id', $user->id)->where('state', 'pending')->sum('amount');
-
-        if ($paisa + $held > $wallet->balance) {
+        if ($paisa + $held > ($wallet?->balance ?? 0)) {
             throw ValidationException::withMessages([
                 'amount' => 'আগের পেন্ডিং উইথড্র বাদ দিলে এত ব্যালেন্স নেই',
             ]);
         }
+
+        $wallet->decrement('balance', $paisa);
 
         Withdrawal::create([
             'user_id' => $user->id,
             'channel_id' => $channel->id,
             'amount' => $paisa,
             'account_no' => $data['account_no'],
+            'state' => 'pending',
         ]);
 
         return redirect()->route('withdrawals.history')

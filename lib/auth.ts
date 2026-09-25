@@ -39,12 +39,21 @@ export function phoneToEmail(phone: string): string {
   return `${p}@${IDENTITY_DOMAIN}`;
 }
 
-/** Best-effort inverse, for showing the number on a profile screen. */
+/** Best-effort inverse, for showing the number on a profile screen.
+   Local-mode sessions use a synthetic email like 01712345678@local-user,
+   while the production auth layer uses 01712345678@id.rr888bd.site. */
 export function emailToPhone(email: string | null | undefined): string | null {
   if (!email) return null;
   const [local, domain] = email.split('@');
-  return domain === IDENTITY_DOMAIN && isValidPhone(local) ? local : null;
+  if (!local || !domain) return null;
+  if (domain === 'local-user' && isValidPhone(local)) return local;
+  if (domain === IDENTITY_DOMAIN && isValidPhone(local)) return local;
+  return null;
 }
+
+/** Shared helper used by account screens to show the real login phone number. */
+export const phoneOf = (session: { user?: { email?: string | null } } | null) =>
+  emailToPhone(session?.user?.email);
 
 /** Taka amounts live in the database as paisa so nothing is ever a float. */
 export const toPaisa = (taka: number) => Math.round(taka * 100);

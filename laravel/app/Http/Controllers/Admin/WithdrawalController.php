@@ -44,8 +44,8 @@ class WithdrawalController extends Controller
 
         try {
             DB::transaction(function () use ($withdrawal, $data, $request, $wallet, $audit): void {
-                if ($data['state'] === 'approved') {
-                    $wallet->apply($withdrawal->user_id, 'withdraw', -$withdrawal->amount, "withdrawal:{$withdrawal->id}");
+                if ($data['state'] === 'rejected') {
+                    $wallet->apply($withdrawal->user_id, 'adjust', $withdrawal->amount, "withdrawal:{$withdrawal->id}:refund");
                 }
 
                 $withdrawal->forceFill([
@@ -60,7 +60,7 @@ class WithdrawalController extends Controller
                     subjectType: 'withdrawal',
                     subjectId: $withdrawal->id,
                     targetUser: $withdrawal->user_id,
-                    amount: $data['state'] === 'approved' ? -$withdrawal->amount : null,
+                    amount: $data['state'] === 'rejected' ? $withdrawal->amount : null,
                     note: $data['admin_note'] ?? null,
                 );
             });

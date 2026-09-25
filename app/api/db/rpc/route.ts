@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import type { PoolConnection } from 'mysql2/promise';
-import { ensureMysqlSchema, getMysqlPool } from '@/lib/mysql-server';
+import { ensureMysqlSchema, getMysqlPool, parseMysqlUserId } from '@/lib/mysql-server';
+import { parseSessionUserId } from '@/lib/session-cookie';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -73,17 +74,67 @@ export async function POST(req: Request) {
         if (deposit.state !== 'pending') throw new Error(`deposit ${id} already ${deposit.state}`);
 
         const approved = fn === 'approve_deposit';
+        const depositUserId = parseMysqlUserId(deposit.user_id);
+        if (approved && depositUserId === null) {
+          throw new Error(`deposit ${id} has invalid user_id; reject this request`);
+        }
+
         await connection.execute(
-          'UPDATE deposits SET state = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?',
-          [approved ? 'approved' : 'rejected', note, id],
+          'UPDATE deposits SET state = ?, status = ?, admin_note = ?, reviewed_at = NOW() WHERE id = ?',
+          [approved ? 'approved' : 'rejected', approved ? 'approved' : 'rejected', note, id],
         );
 
         if (approved) {
-          await connection.execute(
-            'INSERT INTO wallets (user_id, balance, bonus_balance, turnover_need, turnover_done) VALUES (?, ?, 0, 0, 0) ON DUPLICATE KEY UPDATE balance = balance + VALUES(balance)',
-            [String(deposit.user_id), Number(deposit.amount ?? 0)] as (string | number)[],
+          const [users] = await connection.execute(
+            'SELECT id FROM users WHERE id = ? LIMIT 1',
+            [depositUserId],
           );
-          await unlockAfterVerification(connection, String(deposit.user_id));
+          if (!(users as Record<string, unknown>[]).length) {
+            throw new Error(`deposit ${id} user not found; reject this request`);
+          }
+
+          const amount = Number(deposit.amount ?? 0);
+          if (!Number.isSafeInteger(amount) || amount <= 0) {
+            throw new Error(`deposit ${id} has invalid amount`);
+          }
+          const reference = `deposit:${id}`;
+          const [ledgerRows] = await connection.execute(
+            'SELECT id FROM transactions WHERE user_id = ? AND (reference = ? OR ref = ?) LIMIT 1',
+            [depositUserId, reference, reference],
+          );
+          if ((ledgerRows as Record<string, unknown>[]).length) {
+            throw new Error(`deposit ${id} is already credited`);
+          }
+
+          const [walletRows] = await connection.execute(
+            'SELECT balance FROM wallets WHERE user_id = ? FOR UPDATE',
+            [depositUserId],
+          );
+          const wallet = (walletRows as Record<string, unknown>[])[0];
+          const before = Number(wallet?.balance ?? 0);
+          const after = before + amount;
+          if (!Number.isSafeInteger(before) || !Number.isSafeInteger(after)) {
+            throw new Error(`deposit ${id} would overflow wallet balance`);
+          }
+
+          if (wallet) {
+            await connection.execute(
+              'UPDATE wallets SET balance = ? WHERE user_id = ?',
+              [after, depositUserId],
+            );
+          } else {
+            await connection.execute(
+              'INSERT INTO wallets (user_id, balance, bonus_balance, turnover_need, turnover_done) VALUES (?, ?, 0, 0, 0)',
+              [depositUserId, amount],
+            );
+          }
+          await connection.execute(
+            `INSERT INTO transactions
+             (user_id, type, kind, amount, balance_before, balance_after, reference, ref, status, notes)
+             VALUES (?, 'deposit', 'deposit', ?, ?, ?, ?, ?, 'completed', ?)`,
+            [depositUserId, amount, before, after, reference, reference, `Deposit #${id}`],
+          );
+          await unlockAfterVerification(connection, String(depositUserId));
         }
 
         await connection.commit();
@@ -99,20 +150,13 @@ export async function POST(req: Request) {
     return json({ message: `Unsupported RPC: ${String(fn ?? '')}` }, 400);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Database error';
-    const expected = /wrong password|insufficient balance|already|not pending|wallet not found|invalid transaction|turnover/i.test(message);
+    const expected = /wrong password|insufficient balance|already|not pending|wallet not found|invalid transaction|invalid user_id|user not found|invalid amount|overflow wallet|turnover|reject this request/i.test(message);
     return json({ message }, expected ? 400 : 500);
   }
 }
 
 async function sessionUserId() {
-  try {
-    const raw = (await cookies()).get('rr888bd_session')?.value;
-    const session = raw ? JSON.parse(decodeURIComponent(raw)) as { user?: { id?: string } } : null;
-    const id = String(session?.user?.id ?? '');
-    return /^\d+$/.test(id) ? id : '';
-  } catch {
-    return '';
-  }
+  return parseSessionUserId((await cookies()).get('rr888bd_session')?.value);
 }
 
 async function hasTransactionPassword(

@@ -10,6 +10,7 @@ import { useBackLayer } from '@/components/useBackLayer';
 import { useCashierConfig } from '@/components/useCashierConfig';
 import { useLightSheet } from '@/components/useLightSheet';
 import { isImageIcon } from '@/lib/cashier-config';
+import { readAccessToken, readSession, readStoredUser } from '@/lib/supabase';
 import {
   CardLineIcon, CloseThinIcon, EyeOffIcon, EyeOnIcon, IdCardIcon, LockMarkIcon, PlusThinIcon,
 } from '@/components/Icons';
@@ -112,15 +113,18 @@ export default function LinkEWallet({
   // the phone's Back leaves the add-wallet form the way its header arrow does
   useBackLayer(group !== null, closeForm);
 
-  const signedIn = ready && Boolean(session);
+  const persistedUser = readStoredUser() as { id?: string } | null;
+  const persistedUserId = session?.user.id ?? persistedUser?.id ?? null;
+  const signedIn = Boolean(session) || Boolean(readSession()) || Boolean(readAccessToken()) || Boolean(persistedUserId);
   const realName = profile?.real_name ?? '';
 
   const load = useCallback(async () => {
-    if (!supabase || !session) { setWallets([]); return; }
+    const userId = session?.user.id ?? persistedUserId;
+    if (!supabase || !userId) { setWallets([]); return; }
     const { data, error } = await supabase
       .from('payout_accounts')
       .select('id, channel_id, account_no, holder, created_at')
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
     /* the table arrives with migration 005; without it the screen says so
        rather than looking empty */
@@ -128,15 +132,15 @@ export default function LinkEWallet({
     setWallets((data as Wallet[]) ?? []);
   }, [supabase, session]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); }, [load, persistedUserId]);
 
   useEffect(() => {
-    if (!supabase || !session) return;
+    if (!supabase || !persistedUserId) return;
     let live = true;
     void supabase.rpc('has_transaction_password')
       .then(({ data }) => { if (live) setHasTxnPassword(data === true); });
     return () => { live = false; };
-  }, [supabase, session]);
+  }, [supabase, persistedUserId]);
 
   useEffect(() => {
     setHolder(profile?.real_name ?? profile?.display_name ?? '');
@@ -147,7 +151,8 @@ export default function LinkEWallet({
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!picked || !supabase || !session) return;
+    const userId = session?.user.id ?? persistedUserId;
+    if (!picked || !supabase || !userId) return;
     if (clean.length < 4) { setErr('Enter a valid account number'); return; }
     if ((wallets ?? []).length >= cfg.maxWallets) {
       setErr(`Maximum ${cfg.maxWallets} allowed`); return;
@@ -187,7 +192,7 @@ export default function LinkEWallet({
     let error: { message: string } | null = null;
     try {
       ({ error } = await supabase.from('payout_accounts').insert({
-        user_id: session.user.id,
+        user_id: userId,
         channel_id: picked.channelId,
         account_no: clean,
         holder: (realName || holder).trim().slice(0, 60),
@@ -198,9 +203,8 @@ export default function LinkEWallet({
     setBusy(false);
 
     if (error) {
-      setErr(/duplicate|unique/i.test(error.message)
-        ? 'That number is already linked'
-        : 'Could not link it — try again');
+      const msg = error.message || 'Unknown error';
+      setErr(/duplicate|unique/i.test(msg) ? 'That number is already linked' : /forbidden|unauthorized/i.test(msg) ? 'Session expired — sign in again and try once more' : `Could not link it — ${msg}`);
       return;
     }
     closeForm();

@@ -12,7 +12,7 @@ import {
   LogoutIcon, MailIcon, PencilIcon, RebateIcon, RecordIcon, RefreshIcon,
   ShieldIcon, SuggestIcon, TargetIcon, TrendIcon, UserIcon, UsersIcon, WithdrawIcon,
 } from '@/components/Icons';
-import { toTaka } from '@/lib/auth';
+import { phoneOf, toTaka } from '@/lib/auth';
 import { money } from '@/lib/brand';
 import { t } from '@/lib/strings';
 import { useLightSheet } from '@/components/useLightSheet';
@@ -78,10 +78,11 @@ export default function MemberPage() {
   if (!mounted) return null;
 
   const signedIn = Boolean(session) || Boolean(localStorage.getItem('rr888bd_session'));
-  /* the player ID (migration 012) is the number support asks for; before it
-     exists the phone number stands in, as it always did */
-  const userId = profile?.player_no ? String(profile.player_no) : profile?.phone ?? '';
-  const nickname = profile?.display_name || profile?.phone || 'Player';
+  /* The login username is always the player's mobile number. Keep the
+     support ID only as a fallback when the phone has not been loaded yet. */
+  const loginPhone = profile?.phone || phoneOf(session) || '';
+  const userId = loginPhone || (profile?.player_no ? String(profile.player_no) : '');
+  const nickname = profile?.display_name || loginPhone || 'Player';
 
   /* Supabase stamps the auth row, and that is the account's real birthday —
      `profiles` has its own created_at but the provider does not load it. */
@@ -93,7 +94,7 @@ export default function MemberPage() {
     if (!userId) return;
     try {
       await navigator.clipboard.writeText(userId);
-      toast('ID copied');
+      toast(loginPhone ? 'Phone copied' : 'ID copied');
     } catch {
       toast('Could not copy');
     }

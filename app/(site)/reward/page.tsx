@@ -7,7 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import PageHeader from '@/components/PageHeader';
 import { CopyIcon, GiftIcon, MedalIcon, PencilIcon, RefreshIcon, UserIcon, UsersIcon } from '@/components/Icons';
 import { useUI } from '@/components/UIProvider';
-import { toTaka } from '@/lib/auth';
+import { phoneOf, toTaka } from '@/lib/auth';
 import { money } from '@/lib/brand';
 import { useLightSheet } from '@/components/useLightSheet';
 
@@ -54,15 +54,16 @@ export default function RewardPage() {
   const [asking, setAsking] = useState(false);
 
   const signedIn = ready && Boolean(session);
-  const userId = profile?.phone ?? '';
-  const nickname = profile?.display_name || userId || 'Player';
+  const loginPhone = profile?.phone || phoneOf(session) || '';
+  const userId = loginPhone || (profile?.player_no ? String(profile.player_no) : '');
+  const nickname = profile?.display_name || loginPhone || 'Player';
   const level = profile?.vip_level ?? 0;
 
   const copyId = async () => {
     if (!userId) return;
     try {
       await navigator.clipboard.writeText(userId);
-      toast('ID copied');
+      toast(loginPhone ? 'Phone copied' : 'ID copied');
     } catch {
       toast('Could not copy');
     }

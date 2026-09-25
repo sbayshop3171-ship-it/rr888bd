@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const user = await getUserById(userId);
     if (!user || user.is_blocked) return NextResponse.json({ ok: false }, { status: 401 });
 
-    const session = encodeURIComponent(JSON.stringify({ user: { id: userId } }));
+    const session = JSON.stringify({ user: { id: userId } });
     (await cookies()).set('rr888bd_session', session, {
       httpOnly: true,
       sameSite: 'lax',

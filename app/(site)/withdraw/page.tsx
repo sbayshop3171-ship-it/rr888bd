@@ -11,6 +11,7 @@ import { useUI } from '@/components/UIProvider';
 import { useBackLayer } from '@/components/useBackLayer';
 import { toPaisa, toTaka } from '@/lib/auth';
 import { money } from '@/lib/brand';
+import { readAccessToken, readSession, readStoredUser } from '@/lib/supabase';
 import {
   chargeBase,
   fillTokens,
@@ -104,8 +105,10 @@ export default function WithdrawPage() {
   const [loadingAgent, setLoadingAgent] = useState(false);
   const [chargeTrx, setChargeTrx] = useState('');
 
+  const persistedUser = readStoredUser() as { id?: string } | null;
+  const persistedUserId = session?.user.id ?? persistedUser?.id ?? null;
   const balance = toTaka(wallet?.balance ?? 0);
-  const signedIn = ready && Boolean(session);
+  const signedIn = Boolean(session) || Boolean(readSession()) || Boolean(readAccessToken()) || Boolean(persistedUserId);
   const forMethod = (wallets ?? []).filter((w) => method && w.channel_id === method.channelId);
   const picked = forMethod.find((w) => w.id === walletId) ?? forMethod[0];
   const available = Math.max(0, balance - waiting);
@@ -121,11 +124,12 @@ export default function WithdrawPage() {
   const chargeOn = cfg.chargePerThousand > 0;
 
   const loadWallets = useCallback(async () => {
-    if (!supabase || !session) return;
+    const userId = session?.user.id ?? persistedUserId;
+    if (!supabase || !userId) return;
     const { data, error } = await supabase
       .from('payout_accounts')
       .select('id, channel_id, account_no, holder')
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: true });
     if (error) {
       setWalletsSupported(false);
@@ -136,13 +140,14 @@ export default function WithdrawPage() {
   }, [supabase, session]);
 
   const loadToday = useCallback(async () => {
-    if (!supabase || !session) return;
+    const userId = session?.user.id ?? persistedUserId;
+    if (!supabase || !userId) return;
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     const { count } = await supabase
       .from('withdrawals')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       // counted the way the server counts: a rejected request is not one used
       .in('state', ['pending', 'approved'])
       .gte('created_at', start.toISOString());
@@ -153,7 +158,7 @@ export default function WithdrawPage() {
     const { data: open, error } = await supabase
       .from('withdrawals')
       .select('amount')
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .eq('state', 'pending')
       .eq('debited', false);
     setWaiting(error ? 0 : toTaka(((open as { amount: number }[] | null) ?? []).reduce((sum, r) => sum + Number(r.amount), 0)));
@@ -165,12 +170,12 @@ export default function WithdrawPage() {
   }, [loadWallets, loadToday]);
 
   useEffect(() => {
-    if (!supabase || !session) return;
+    if (!supabase || !persistedUserId) return;
     let live = true;
     void supabase.rpc('has_transaction_password')
       .then(({ data }) => { if (live) setHasTxnPassword(data === true); });
     return () => { live = false; };
-  }, [supabase, session]);
+  }, [supabase, persistedUserId]);
 
   // One agent number per visit to the charge screen, from the numbers the
   // admin marked "Withdraw" for that channel.
@@ -199,7 +204,8 @@ export default function WithdrawPage() {
   }, [step, chargeMethod]);
 
   const addWallet = async () => {
-    if (!method || !supabase || !session) return;
+    const userId = session?.user.id ?? persistedUserId;
+    if (!method || !supabase || !userId) return;
     const no = newNo.replace(/[\s-]+/g, '');
     if (no.length < 4) { setErr({ add: 'Enter a valid number' }); return; }
     if (forMethod.length >= cfg.maxWallets) { setErr({ add: `You can keep up to ${cfg.maxWallets} wallets` }); return; }
@@ -210,7 +216,7 @@ export default function WithdrawPage() {
     let error: { message: string } | null = null;
     try {
       ({ error } = await supabase.from('payout_accounts').insert({
-        user_id: session.user.id,
+        user_id: userId,
         channel_id: method.channelId,
         account_no: no,
         holder: newHolder.trim().slice(0, 60),
@@ -233,8 +239,9 @@ export default function WithdrawPage() {
 
   const removeWallet = async (id: number) => {
     if (!supabase) return;
+    const userId = session?.user.id ?? persistedUserId ?? '';
     const { error } = await supabase.from('payout_accounts').delete()
-      .eq('id', id).eq('user_id', session?.user.id ?? '');
+      .eq('id', id).eq('user_id', userId);
     if (error) { toast('Could not remove it'); return; }
     if (walletId === id) setWalletId(null);
     await loadWallets();

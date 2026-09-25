@@ -10,6 +10,7 @@ import { useLightSheet } from './useLightSheet';
 import { toTaka } from '@/lib/auth';
 import { money } from '@/lib/brand';
 import { DEPOSIT_CHANNELS } from '@/lib/payments';
+import { readStoredUser } from '@/lib/supabase';
 
 /* ============================================================
    Deposit Record / Withdrawal Record.
@@ -121,15 +122,19 @@ export default function CashierHistory({
   const [preset, setPreset] = useState<Preset>('today');
   const [state, setState] = useState<'all' | Row['state']>('all');
   const [channel, setChannel] = useState('all');
+  const storedUser = readStoredUser() as { id?: unknown; user?: { id?: unknown } } | null;
+  const userId = session?.user.id
+    ?? (typeof storedUser?.id === 'string' ? storedUser.id : null)
+    ?? (typeof storedUser?.user?.id === 'string' ? storedUser.user.id : null);
 
   useEffect(() => {
-    if (!supabase || !session) return;
+    if (!supabase || !userId) return;
     let live = true;
 
     void (async () => {
       for (const cols of TIERS[table]) {
         const { data, error } = await supabase.from(table).select(cols)
-          .eq('user_id', session.user.id)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(50);
         if (!live) return;
@@ -139,7 +144,7 @@ export default function CashierHistory({
     })();
 
     return () => { live = false; };
-  }, [supabase, session, table]);
+  }, [supabase, userId, table]);
 
   const span = useMemo((): [string, string] => {
     if (preset === 'today') return [dayOf(new Date()), dayOf(new Date())];
@@ -203,9 +208,9 @@ export default function CashierHistory({
     </>
   );
 
-  if (!ready) return null;
+  if (!ready && !userId) return <>{chrome}<Empty glyph={glyph} text="Loading…" /></>;
 
-  if (!backendReady || !session) {
+  if (!backendReady || !userId) {
     return (
       <>
         {chrome}

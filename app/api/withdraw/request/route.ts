@@ -90,11 +90,12 @@ export async function POST(req: Request) {
     return fail('password-locked', `Too many wrong passwords — try again in ${Math.ceil(Number(pwLock.data) / 60)} min`, 429);
   }
 
-  // what the player holds right now: nothing is taken at request time
-  // (014), so this is also what the charge is worked out on
-  const { data: wallet } = await asService.from('wallets').select('balance').eq('user_id', uid).maybeSingle();
-
   const amount = Math.round(taka * 100);
+  const { data: wallet } = await asService.from('wallets').select('balance').eq('user_id', uid).maybeSingle();
+  if ((Number(wallet?.balance ?? 0) - amount) < 0) {
+    return fail('insufficient-balance', 'Not enough balance', 400);
+  }
+
   // The pre-012 browser-side fallback is gone: it took no password and
   // checked no turnover, and 012+ are applied.
   const { data, error } = await asService.rpc('request_withdrawal', {

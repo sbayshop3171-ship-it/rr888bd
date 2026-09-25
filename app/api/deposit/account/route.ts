@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { PaymentAccountKind } from '@/lib/payment-accounts';
-import { isKnownChannel, pickOperatorAccount } from '@/lib/payment-accounts-store';
+import { hasDepositAccount, isKnownChannel, pickOperatorAccount } from '@/lib/payment-accounts-store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,6 +18,9 @@ export async function GET(req: Request) {
   const channelId = params.get('channel')?.trim() ?? '';
   if (!isKnownChannel(channelId)) {
     return json({ ok: false, reason: 'unknown-channel' }, 400);
+  }
+  if (params.get('available') === '1') {
+    return json({ ok: true, available: await hasDepositAccount(channelId) });
   }
   // the deposit method's pay type narrows which kind of operator number fits
   const kinds = (params.get('kinds') ?? '')

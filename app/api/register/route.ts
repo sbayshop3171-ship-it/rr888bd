@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
     const session = { user: { id: String(user.id), email: user.phone ? `${user.phone}@local-user` : null, created_at: new Date().toISOString() } };
     const token = `local.${Buffer.from(JSON.stringify({ userId: user.id, phone: user.phone })).toString('base64')}`;
-    (await cookies()).set('rr888bd_session', encodeURIComponent(JSON.stringify(session)), {
+    (await cookies()).set('rr888bd_session', JSON.stringify(session), {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',

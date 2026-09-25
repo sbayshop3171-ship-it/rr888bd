@@ -56,6 +56,17 @@ export async function listAccounts(): Promise<PaymentAccount[]> {
   return sorted(store.accounts);
 }
 
+/** Used by the public deposit picker without consuming/rotating an account. */
+export async function hasDepositAccount(channelId: string): Promise<boolean> {
+  if (!isKnownChannel(channelId)) return false;
+  const store = await readStore();
+  return store.accounts.some(
+    (account) => account.channelId === channelId
+      && account.status === 'active'
+      && account.use !== 'withdraw',
+  );
+}
+
 export async function addAccount(input: PaymentAccountInput): Promise<AccountMutationResult> {
   const clean = normalizeInput(input);
   if ('reason' in clean) return { ok: false, reason: clean.reason };

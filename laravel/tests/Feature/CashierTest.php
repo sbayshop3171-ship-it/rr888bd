@@ -72,7 +72,7 @@ class CashierTest extends TestCase
         $this->get('/withdraw')->assertRedirect('/login');
     }
 
-    public function test_a_withdrawal_request_is_only_pending_and_debits_nothing(): void
+    public function test_a_withdrawal_request_is_pending_and_debits_the_wallet_immediately(): void
     {
         $this->actingAs($this->player)
             ->post('/withdraw', [
@@ -88,7 +88,12 @@ class CashierTest extends TestCase
             'state' => 'pending',
         ]);
 
-        $this->assertSame(500_000, $this->player->wallet->fresh()->balance);
+        $this->assertSame(400_000, $this->player->wallet->fresh()->balance);
+        $this->assertDatabaseHas('transactions', [
+            'user_id' => $this->player->id,
+            'kind' => 'withdrawal_hold',
+            'amount' => -100_000,
+        ]);
     }
 
     public function test_a_withdrawal_larger_than_the_balance_is_rejected(): void

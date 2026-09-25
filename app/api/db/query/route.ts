@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMysqlSchema, getMysqlPool } from '@/lib/mysql-server';
+import { parseSessionUserId } from '@/lib/session-cookie';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -90,6 +91,8 @@ export async function POST(req: Request) {
       ...inEntries.flatMap(([, entries]) => entries),
       ...parsedOr.flatMap((item) => item.values),
     ];
+    const requestedColumns = String(columns);
+    const wantsProfiles = /profiles!user_id\s*\(/i.test(requestedColumns);
     const { sql: safeColumns } = sanitizeMysqlColumns(table, columns);
 
     if (action === 'write') {
@@ -156,6 +159,25 @@ export async function POST(req: Request) {
       }
     }
 
+    // PostgREST embeds profiles on cashier rows. Hydrate the same shape for
+    // MySQL so the admin queue can show player details instead of a dash.
+    if (wantsProfiles && resultRows.length) {
+      const ids = resultRows
+        .map((row) => String(row.user_id ?? ''))
+        .filter((id) => /^\d+$/.test(id));
+      if (ids.length) {
+        const [profileRows] = await pool.query(
+          `SELECT id, phone, display_name, player_no
+           FROM profiles WHERE id IN (${ids.map(() => '?').join(', ')})`,
+          ids,
+        );
+        const byId = new Map(
+          (profileRows as Record<string, unknown>[]).map((profile) => [String(profile.id), profile]),
+        );
+        for (const row of resultRows) row.profiles = byId.get(String(row.user_id)) ?? null;
+      }
+    }
+
     return NextResponse.json({ ok: true, rows: resultRows });
   } catch (error) {
     return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : 'Database error' }, { status: 500 });
@@ -165,14 +187,8 @@ export async function POST(req: Request) {
 function playerIdFromRequest(req: Request): string | null {
   const raw = req.headers.get('cookie')?.split(';').map((part) => part.trim())
     .find((part) => part.startsWith('rr888bd_session='))?.slice('rr888bd_session='.length);
-  if (!raw) return null;
-  try {
-    const session = JSON.parse(decodeURIComponent(raw)) as { user?: { id?: unknown } };
-    const id = String(session.user?.id ?? '');
-    return /^\d+$/.test(id) ? id : null;
-  } catch {
-    return null;
-  }
+  const id = parseSessionUserId(raw);
+  return id || null;
 }
 
 function playerQueryAllowed(
@@ -193,10 +209,14 @@ function playerQueryAllowed(
     return fields.every((field) => PLAYER_PROFILE_FIELDS.has(field));
   }
 
-  if (table === 'payout_accounts' && action === 'write' && operation === 'insert') {
+  if (table === 'payout_accounts' && action === 'write') {
     const row = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {};
-    return String(row.user_id ?? '') === playerId
-      && Object.keys(row).every((field) => PLAYER_PAYOUT_FIELDS.has(field));
+    const requestedUser = String(row.user_id ?? filterRecord.user_id ?? '');
+    const validFields = Object.keys(row).every((field) => PLAYER_PAYOUT_FIELDS.has(field));
+    const isAllowedInsert = operation === 'insert' && validFields && (!requestedUser || requestedUser === playerId);
+    const isAllowedUpdate = operation === 'update' && (!requestedUser || requestedUser === playerId) && validFields;
+    const isAllowedDelete = operation === 'delete' && String(filterRecord.user_id ?? '') === playerId;
+    if (isAllowedInsert || isAllowedUpdate || isAllowedDelete) return true;
   }
 
   if (String(filterRecord.user_id ?? '') !== playerId) return false;

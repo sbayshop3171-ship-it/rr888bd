@@ -65,8 +65,52 @@ export default function DepositPage() {
   const cfg = config.deposit;
 
   const methods = useMemo(() => cfg.methods.filter((m) => m.active), [cfg.methods]);
+  const channelKeys = useMemo(
+    () => [...new Set(methods.map((m) => m.channelId))].sort().join(','),
+    [methods],
+  );
+  const [availableChannels, setAvailableChannels] = useState<Set<string> | null>(null);
+  const [checkingAccounts, setCheckingAccounts] = useState(false);
+  useEffect(() => {
+    if (!configReady) return;
+    const channels = channelKeys ? channelKeys.split(',') : [];
+    if (channels.length === 0) {
+      setAvailableChannels(new Set());
+      setCheckingAccounts(false);
+      return;
+    }
+
+    let live = true;
+    setCheckingAccounts(true);
+    setAvailableChannels(null);
+    void Promise.all(channels.map(async (channel) => {
+      try {
+        const response = await fetch(
+          `/api/deposit/account?channel=${encodeURIComponent(channel)}&available=1`,
+          { cache: 'no-store' },
+        );
+        const data = await response.json() as { available?: boolean };
+        return data.available === true ? channel : null;
+      } catch {
+        return null;
+      }
+    })).then((found) => {
+      if (live) setAvailableChannels(new Set(found.filter((channel): channel is string => Boolean(channel))));
+    }).finally(() => {
+      if (live) setCheckingAccounts(false);
+    });
+
+    return () => { live = false; };
+  }, [channelKeys, configReady]);
+
+  const availableMethods = useMemo(
+    () => availableChannels === null
+      ? methods
+      : methods.filter((m) => availableChannels.has(m.channelId)),
+    [availableChannels, methods],
+  );
   const [methodId, setMethodId] = useState('');
-  const method: DepositMethod | undefined = methods.find((m) => m.id === methodId) ?? methods[0];
+  const method: DepositMethod | undefined = availableMethods.find((m) => m.id === methodId) ?? availableMethods[0];
 
   const [step, setStep] = useState<Step>('pick');
   const [amount, setAmount] = useState('');
@@ -218,7 +262,9 @@ export default function DepositPage() {
       <>
         <CashierHeader title={t.deposit} historyHref="/deposit-history" direction="in" />
         <div className="note" style={{ margin: 12 }}>
-          {configReady ? 'No deposit method is active right now. Please contact support.' : 'Loading…'}
+          {!configReady || checkingAccounts
+            ? 'Loading…'
+            : 'No deposit method has a payment number configured right now. Please contact support.'}
         </div>
       </>
     );
