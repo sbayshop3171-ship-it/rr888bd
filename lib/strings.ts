@@ -10,8 +10,6 @@ export const t = {
   register: 'Register',
   registerNow: 'Register Now',
   logout: 'Log Out',
-  download: 'Download',
-  downloadBonus: 'Download the app and get a ৳18 bonus',
   deposit: 'Deposit',
   withdraw: 'Withdraw',
   refer: 'Refer',

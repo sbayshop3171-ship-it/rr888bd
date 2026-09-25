@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import InstallPrompt from '@/components/InstallPrompt';
 import { BRAND } from '@/lib/brand';
 import './globals.css';
 
@@ -83,17 +82,6 @@ const extensionErrorGuard = `
 })();
 `;
 
-const installPromptCatcher = `
-(function () {
-  window.addEventListener('beforeinstallprompt', function (event) {
-    // stop Chrome's own mini-infobar; the site shows its own sheet instead
-    event.preventDefault();
-    window.__skInstallEvent = event;
-    window.dispatchEvent(new Event('sk:installable'));
-  });
-})();
-`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -102,14 +90,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           id="extension-error-guard"
           dangerouslySetInnerHTML={{ __html: extensionErrorGuard }}
         />
-        <script
-          id="install-prompt-catcher"
-          dangerouslySetInnerHTML={{ __html: installPromptCatcher }}
-        />
       </head>
       <body suppressHydrationWarning>
         {children}
-        <InstallPrompt />
       </body>
     </html>
   );

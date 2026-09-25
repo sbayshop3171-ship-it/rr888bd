@@ -1,7 +1,6 @@
 import AnnouncementModal from '@/components/AnnouncementModal';
 import Carousel from '@/components/Carousel';
 import CategoryTabs from '@/components/CategoryTabs';
-import DownloadStrip from '@/components/DownloadStrip';
 import FavouriteGames from '@/components/FavouriteGames';
 import Footer from '@/components/Footer';
 import GameSection from '@/components/GameSection';
@@ -17,7 +16,6 @@ import { DepositIcon, WithdrawIcon } from '@/components/Icons';
 export default function HomePage() {
   return (
     <>
-      <DownloadStrip />
       <Header />
 
       <NoticeBar />
