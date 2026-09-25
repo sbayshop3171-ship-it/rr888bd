@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getCashierConfig } from '@/lib/cashier-config-store';
-import { chargeBase, withdrawCharge } from '@/lib/cashier-config';
 import { accountBlock } from '@/lib/player-status';
 import { adminClient, serverClient } from '@/lib/supabase';
 import { lockStatus } from '@/lib/withdraw-lock';
@@ -128,18 +127,10 @@ export async function POST(req: Request) {
   const id = typeof data === 'number' ? data : Number(data) || null;
   await asService.rpc('password_attempt', { p_user: uid, p_ok: true });
 
-  /* The handling fee is quoted now, on the balance the player has as they
-     ask. It used to be quoted when the charge screen first opened — a player
-     could open it with a bet in the air, balance down, and freeze a lower
-     fee for good. A quote is frozen once written (007/016). */
-  if (id && cfg.chargePerThousand > 0) {
-    const held = Number(wallet?.balance ?? 0) / 100;
-    const charge = withdrawCharge(chargeBase(cfg.chargeBasis, taka, held), cfg.chargePerThousand);
-    await asService.from('withdrawals')
-      .update({ charge_amount: Math.round(charge * 100) })
-      .eq('id', id).eq('user_id', uid).or('charge_amount.is.null,charge_amount.eq.0');
-  }
-
+  // Withdrawal requests are complete once they enter the pending queue. The
+  // database RPC has already deducted the requested amount atomically and
+  // recorded the hold ledger entry; there is no agent-charge gate or second
+  // TrxID step in this flow.
   return json({ ok: true, id });
 }
 

@@ -9,39 +9,31 @@ import EmptyWalletArt from '@/components/EmptyWalletArt';
 import { useCashierConfig } from '@/components/useCashierConfig';
 import { useUI } from '@/components/UIProvider';
 import { useBackLayer } from '@/components/useBackLayer';
-import { toPaisa, toTaka } from '@/lib/auth';
+import { toTaka } from '@/lib/auth';
 import { money } from '@/lib/brand';
 import { readAccessToken, readSession, readStoredUser } from '@/lib/supabase';
 import {
-  chargeBase,
   fillTokens,
   isImageIcon,
-  withdrawCharge,
-  type DepositMethod,
   type WithdrawMethod,
 } from '@/lib/cashier-config';
-import type { PublicDepositAccount } from '@/lib/payment-accounts';
-import { DEPOSIT_CHANNELS } from '@/lib/payments';
 import { t } from '@/lib/strings';
 
 type Wallet = { id: number; channel_id: string; account_no: string; holder: string };
 
-/** The raised request, snapshotted the moment it leaves the form, so the
-    summary and the charge read the figures the player agreed to. */
+/** The raised request, snapshotted the moment it leaves the form. */
 type Raised = {
   id: number | null;
   amount: number;
   account: string;
   balance: number;
-  charge: number;
 };
 
-type Step = 'form' | 'summary' | 'pay' | 'done';
+type Step = 'form' | 'summary' | 'done';
 
-/** Four screens. Pick a method, a saved wallet and an amount → read the
-    summary of what the withdrawal will cost → cash the agent charge out to
-    the number shown and hand back its TrxID → done. Every label, rule and
-    the charge rate itself come from the admin's cashier design. */
+/** Pick a method, a saved wallet and an amount → review → submit to the
+    pending admin queue. The requested amount is held atomically when the
+    request is created; there is no charge-payment gate. */
 export default function WithdrawPage() {
   /* The withdraw flow is the one white screen on a dark site, and its `cz-`
      classes are shared with deposit — so the skin is a body class held for
@@ -61,17 +53,6 @@ export default function WithdrawPage() {
   const methods = useMemo(() => cfg.methods.filter((m) => m.active), [cfg.methods]);
   const [methodId, setMethodId] = useState('');
   const method: WithdrawMethod | undefined = methods.find((m) => m.id === methodId) ?? methods[0];
-
-  // The charge is cashed out to us, so it is paid the same way a deposit is:
-  // through a method the admin marked as a cash-out in the deposit design.
-  const chargeMethods = useMemo(() => {
-    const active = config.deposit.methods.filter((m) => m.active);
-    const cashout = active.filter((m) => m.payType === 'cashout');
-    return cashout.length ? cashout : active.filter((m) => m.payType !== 'transfer');
-  }, [config.deposit.methods]);
-  const [chargeMethodId, setChargeMethodId] = useState('');
-  const chargeMethod: DepositMethod | undefined =
-    chargeMethods.find((m) => m.id === chargeMethodId) ?? chargeMethods[0];
 
   const [wallets, setWallets] = useState<Wallet[] | null>(null);
   // false once the payout_accounts table turns out to be missing (migration
@@ -101,9 +82,6 @@ export default function WithdrawPage() {
   // after the request is raised there is nothing to go back into
   useBackLayer(step === 'summary', () => { setStep('form'); setErr({}); });
   const [raised, setRaised] = useState<Raised | null>(null);
-  const [agent, setAgent] = useState<PublicDepositAccount | null>(null);
-  const [loadingAgent, setLoadingAgent] = useState(false);
-  const [chargeTrx, setChargeTrx] = useState('');
 
   const persistedUser = readStoredUser() as { id?: string } | null;
   const persistedUserId = session?.user.id ?? persistedUser?.id ?? null;
@@ -114,14 +92,8 @@ export default function WithdrawPage() {
   const available = Math.max(0, balance - waiting);
   const remaining = cfg.dailyLimit > 0 ? Math.max(0, cfg.dailyLimit - todayCount) : null;
 
-  // What the player will owe on top of the request. It never leaves the
-  // wallet — the admin collects it against the TrxID — so every screen only
-  // has to state it plainly and keep it in step with the amount box.
   const typed = Number(amount);
   const typedOk = Number.isFinite(typed) && typed > 0;
-  const previewBase = chargeBase(cfg.chargeBasis, typedOk ? typed : 0, balance);
-  const previewCharge = withdrawCharge(previewBase, cfg.chargePerThousand);
-  const chargeOn = cfg.chargePerThousand > 0;
 
   const loadWallets = useCallback(async () => {
     const userId = session?.user.id ?? persistedUserId;
@@ -176,32 +148,6 @@ export default function WithdrawPage() {
       .then(({ data }) => { if (live) setHasTxnPassword(data === true); });
     return () => { live = false; };
   }, [supabase, persistedUserId]);
-
-  // One agent number per visit to the charge screen, from the numbers the
-  // admin marked "Withdraw" for that channel.
-  useEffect(() => {
-    if (step !== 'pay' || !chargeMethod) return;
-    let live = true;
-    setLoadingAgent(true);
-    setAgent(null);
-    /* side=withdraw so the charge lands on the number the admin designated
-       for it at /admin/payments, not on whichever deposit till came up. */
-    const url = `/api/deposit/account?side=withdraw&channel=${encodeURIComponent(chargeMethod.channelId)}`;
-    const pick = async () => {
-      for (const query of [`${url}&kinds=agent`, url]) {
-        const res = await fetch(query, { cache: 'no-store' }).catch(() => null);
-        if (res?.ok) {
-          const data = (await res.json()) as { ok: true; account: PublicDepositAccount };
-          if (data?.ok) return data.account;
-        }
-      }
-      return null;
-    };
-    void pick()
-      .then((found) => { if (live) setAgent(found); })
-      .finally(() => { if (live) setLoadingAgent(false); });
-    return () => { live = false; };
-  }, [step, chargeMethod]);
 
   const addWallet = async () => {
     const userId = session?.user.id ?? persistedUserId;
@@ -299,13 +245,12 @@ export default function WithdrawPage() {
       amount: n,
       account: accountNo,
       balance,
-      charge: withdrawCharge(chargeBase(cfg.chargeBasis, n, balance), cfg.chargePerThousand),
     });
     setStep('summary');
     window.scrollTo({ top: 0 });
   };
 
-  /* ---------------- step 2 → 3: raise the request ------------------------ */
+  /* ---------------- step 2: raise the pending request -------------------- */
   const apply = async () => {
     if (!method || !raised || !supabase) return;
     setBusy(true);
@@ -349,64 +294,9 @@ export default function WithdrawPage() {
     await refresh();
     void loadToday();
 
-    // Nothing more to pay: skip the charge screen entirely.
-    if (!chargeOn || raised.charge <= 0) {
-      setStep('done');
-      window.scrollTo({ top: 0 });
-      return;
-    }
-    /* The charge is quoted by the server from the cashier config — the
-       browser only says which withdrawal and which channel. */
-    if (id !== null) {
-      await quoteCharge(id, { channelId: chargeMethod?.channelId });
-    }
-    setStep('pay');
-    window.scrollTo({ top: 0 });
-  };
-
-  /* The charge and the proof both go through our own route rather than
-     straight at the database: the figure is worked out server-side from the
-     cashier config, so the browser never gets to say what it owes. */
-  const quoteCharge = async (
-    id: number,
-    extra: { channelId?: string; trxId?: string },
-  ): Promise<{ ok: boolean; message?: string }> => {
-    try {
-      const res = await fetch('/api/withdraw/charge', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id, ...extra }),
-      });
-      const data = (await res.json()) as { ok?: boolean; message?: string };
-      return { ok: Boolean(data?.ok), message: data?.message };
-    } catch {
-      return { ok: false };
-    }
-  };
-
-  /* ---------------- step 3 → 4: hand back the charge TrxID --------------- */
-  const confirmCharge = async () => {
-    if (!raised) return;
-    const trx = chargeTrx.trim();
-    if (!trx) { setErr({ trx: 'The TrxID is required!' }); return; }
-
-    setBusy(true);
-    // no id, nowhere to attach the TrxID — say so rather than show "done"
-    const saved = raised.id === null
-      ? { ok: false }
-      : await quoteCharge(raised.id, {
-        channelId: chargeMethod?.channelId,
-        trxId: trx,
-      });
-    setBusy(false);
-
-    if (!saved.ok) {
-      setErr({ trx: saved.message ?? 'Could not submit the TrxID — try again' });
-      return;
-    }
-    // the TrxID is when the amount leaves the wallet (migration 016)
-    await refresh();
-    setErr({});
+    // The request route and its database transaction have already deducted
+    // the amount and placed the request in pending state. Nothing else is
+    // required from the player.
     setStep('done');
     window.scrollTo({ top: 0 });
   };
@@ -414,21 +304,10 @@ export default function WithdrawPage() {
   const restart = () => {
     setAmount('');
     setPassword('');
-    setChargeTrx('');
     setRaised(null);
-    setAgent(null);
     setErr({});
     setStep('form');
     window.scrollTo({ top: 0 });
-  };
-
-  const copy = async (value: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      toast(`${label} copied`);
-    } catch {
-      toast('Could not copy — write it down');
-    }
   };
 
   if (lock.status?.locked) {
@@ -455,16 +334,14 @@ export default function WithdrawPage() {
   }
 
   const tokens = {
-    rate: money(cfg.chargePerThousand),
     min: money(method.min),
     max: money(method.max),
     time: cfg.processingTime,
-    charge: money(raised?.charge ?? previewCharge),
     balance: money(raised?.balance ?? balance),
     amount: money(raised?.amount ?? (typedOk ? typed : 0)),
   };
 
-  /* ---------------- step 4: done ---------------- */
+  /* ---------------- submitted request ---------------- */
   if (step === 'done' && raised) {
     return (
       <>
@@ -474,9 +351,7 @@ export default function WithdrawPage() {
           <h2>Request submitted!</h2>
           <p>
             Your request to send {money(raised.amount)} to {method.name} ({raised.account}) has been submitted.
-            {raised.charge > 0 && chargeTrx.trim()
-              ? ` Once the charge TrxID (${chargeTrx.trim()}) is verified the money arrives within ${cfg.processingTime}.`
-              : ` Once an admin approves it, the money arrives within ${cfg.processingTime}.`}
+            {` Once an admin approves it, the money arrives within ${cfg.processingTime}.`}
           </p>
           <button type="button" className="btn btn--gold" onClick={restart}>Another withdrawal</button>
           <div className="cz-done__links">
@@ -488,124 +363,16 @@ export default function WithdrawPage() {
     );
   }
 
-  /* ---------------- step 3: pay the agent charge ---------------- */
-  if (step === 'pay' && raised) {
-    const guide = cfg.guideLines.split('\n').map((l) => l.trim()).filter(Boolean);
-    return (
-      <>
-        <div className="cz-top cz-top--pay">
-          <div>
-            <b>BDT {raised.charge.toLocaleString('en-IN')}</b>
-            <small>{cfg.payTitle}</small>
-          </div>
-          <span className="cz-top__tag">PAY</span>
-        </div>
-
-        <div className="cz-pay">
-          {cfg.payWarning && <p className="cz-warn">{cfg.payWarning}</p>}
-
-          {chargeMethods.length > 1 && (
-            <div className="cz-tabs scroll-x" role="tablist">
-              {chargeMethods.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={m.id === chargeMethod?.id}
-                  className={`cz-tab${m.id === chargeMethod?.id ? ' on' : ''}`}
-                  onClick={() => { setChargeMethodId(m.id); setErr({}); }}
-                >
-                  <MethodIcon method={m} size={30} />
-                  <span>{m.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {chargeMethod && (
-            <div className="cz-gate" style={{ background: chargeMethod.color }}>
-              <MethodIcon method={chargeMethod} size={40} />
-              <b>{channelName(chargeMethod.channelId)} এজেন্ট চার্জ</b>
-            </div>
-          )}
-
-          <div className="cz-label">এজেন্ট নাম্বার<span>*</span></div>
-          {cfg.agentNote && <p className="cz-sub">{cfg.agentNote}</p>}
-          {loadingAgent ? (
-            <div className="paybox paybox--wait">নাম্বার আনা হচ্ছে…</div>
-          ) : agent ? (
-            <div className="cz-wallet">
-              <div className="cz-wallet__row">
-                <b>{agent.number}</b>
-                <button type="button" className="cz-wallet__copy" onClick={() => void copy(agent.number, 'Number')} aria-label="Copy">⧉</button>
-              </div>
-              {agent.holder && <div className="cz-wallet__meta"><span>{agent.holder}</span></div>}
-            </div>
-          ) : (
-            <div className="paybox paybox--empty">
-              এই মুহূর্তে কোনো এজেন্ট নাম্বার সেট করা নেই। সাপোর্টে যোগাযোগ করুন — আপনার
-              রিকোয়েস্টটি জমা আছে, বাতিল হয়নি।
-            </div>
-          )}
-
-          <div className="cz-label">চার্জের পরিমাণ<span>*</span></div>
-          {cfg.chargeExactNote && <p className="cz-sub">{cfg.chargeExactNote}</p>}
-          <div className="cz-wallet cz-wallet--gold">
-            <div className="cz-wallet__row">
-              <b>{money(raised.charge)}</b>
-              <button type="button" className="cz-wallet__copy" onClick={() => void copy(String(raised.charge), 'Charge')} aria-label="Copy">⧉</button>
-            </div>
-          </div>
-
-          {(cfg.guideTitle || guide.length > 0) && (
-            <div className="cz-guide">
-              {cfg.guideTitle && <b>ⓘ {cfg.guideTitle}</b>}
-              <ul>
-                {guide.map((line, i) => <li key={i}>{fillTokens(line, tokens)}</li>)}
-              </ul>
-            </div>
-          )}
-
-          <p className="cz-meta">
-            উত্তোলন: <b>{money(raised.amount)}</b> · আগের ব্যালেন্স: <b>{money(raised.balance)}</b>
-          </p>
-
-          <div className="cz-label">
-            {cfg.chargeTrxLabel}
-            <span>(required)</span>
-          </div>
-          <input
-            className={`cz-trx${chargeTrx.trim() ? ' ok' : ''}`}
-            placeholder={cfg.chargeTrxPlaceholder}
-            value={chargeTrx}
-            onChange={(e) => { setChargeTrx(e.target.value); setErr({}); }}
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          {err.trx && <p className="cz-err">{err.trx}</p>}
-
-          <div className="cz-next cz-next--inline">
-            <button type="button" className="btn btn--gold btn--block" disabled={busy} onClick={() => void confirmCharge()}>
-              {busy ? 'পাঠানো হচ্ছে…' : 'নিশ্চিত'}
-            </button>
-          </div>
-
-          {cfg.chargeCaution && (
-            <div className="cz-caution">
-              <b>সতর্কতাঃ</b>
-              <p>{cfg.chargeCaution}</p>
-            </div>
-          )}
-        </div>
-      </>
-    );
-  }
-
   /* ---------------- step 2: the summary ---------------- */
   if (step === 'summary' && raised) {
-    const rules = cfg.rules.split('\n').map((l) => l.trim()).filter(Boolean);
-    const base = chargeBase(cfg.chargeBasis, raised.amount, raised.balance);
+    // Older cashier settings may still contain the retired agent-charge copy.
+    // Do not let that legacy text turn the review screen back into a charge
+    // gate after the flow has been switched to direct withdrawal requests.
+    const rules = cfg.rules
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .filter((line) => !/charge|চার্জ|trxid/i.test(line));
     return (
       <>
         <div className="cz-top cz-top--pay">
@@ -614,11 +381,14 @@ export default function WithdrawPage() {
             <b>BDT {raised.amount.toLocaleString('en-IN')}</b>
             <small>{cfg.summaryTitle}</small>
           </div>
-          <span className="cz-top__tag">PAY</span>
+          <span className="cz-top__tag">WITHDRAW</span>
         </div>
 
         <div className="cz-pay">
-          {cfg.summaryWarning && <p className="cz-warn">{cfg.summaryWarning}</p>}
+          <p className="cz-warn">
+            Submit করলে আপনার ব্যালেন্স থেকে টাকাটি সঙ্গে সঙ্গে hold হবে। Admin approve করলে withdrawal সম্পন্ন হবে,
+            আর reject করলে টাকা স্বয়ংক্রিয়ভাবে ফেরত যাবে।
+          </p>
 
           <div className="cz-gate" style={{ background: method.color }}>
             <MethodIcon method={method} size={40} />
@@ -631,16 +401,6 @@ export default function WithdrawPage() {
 
           <div className="cz-label">উত্তোলনের পরিমাণ</div>
           <div className="cz-ro cz-ro--gold">{money(raised.amount)}</div>
-
-          {chargeOn && raised.charge > 0 && (
-            <>
-              <div className="cz-label cz-label--warn">⚠ {cfg.chargeLabel}<span>*</span></div>
-              <p className="cz-sub">
-                {money(base)} × ({money(cfg.chargePerThousand)}/৳1,000) = {money(raised.charge)}
-              </p>
-              <div className="cz-ro cz-ro--red">{money(raised.charge)}</div>
-            </>
-          )}
 
           {rules.length > 0 && (
             <div className="cz-rules">
@@ -658,15 +418,6 @@ export default function WithdrawPage() {
             </div>
           )}
 
-          {chargeOn && raised.charge > 0 && (
-            <div className="cz-calc">
-              <b>🧮 চার্জের হিসাব</b>
-              <p><span>{cfg.chargeBasis === 'balance' ? 'আপনার ব্যালেন্স' : 'উত্তোলনের পরিমাণ'}</span><b>{money(base)}</b></p>
-              <p><span>চার্জের হার</span><b>প্রতি ৳1,000-এ {money(cfg.chargePerThousand)}</b></p>
-              <p className="cz-calc__total"><span>মোট চার্জ</span><b>{money(raised.charge)}</b></p>
-            </div>
-          )}
-
           {err.apply && <p className="cz-err">{err.apply}</p>}
 
           <div className="cz-next cz-next--inline">
@@ -675,12 +426,6 @@ export default function WithdrawPage() {
             </button>
           </div>
 
-          {cfg.chargeWarning && (
-            <div className="cz-caution">
-              <b>Caution:</b>
-              <p>{cfg.chargeWarning}</p>
-            </div>
-          )}
         </div>
       </>
     );
@@ -812,17 +557,13 @@ export default function WithdrawPage() {
             : cfg.passwordHint ? <p className="cz-limit">{cfg.passwordHint}</p> : null)}
         </section>
 
-        {/* The charge is not shown here. On this screen the player is still
-            deciding how much to take out, and a ৳6,208 figure against a
-            balance they have not committed reads as a fee on nothing. It is
-            worked out and shown on the summary, once there is a real
-            withdrawal for it to apply to. */}
-
         <div className="cz-next cz-next--inline">
           <button type="submit" className="btn btn--gold btn--block" disabled={busy || !typedOk || !password.trim()}>
             {busy ? 'Verifying…' : `${t.withdraw} request`}
           </button>
-          {cfg.note && <p className="cz-limit">{cfg.note}</p>}
+          <p className="cz-limit">
+            The requested amount is held when you submit. It is refunded automatically if the admin rejects the request.
+          </p>
         </div>
       </form>
 
@@ -850,11 +591,6 @@ export default function WithdrawPage() {
       )}
     </>
   );
-}
-
-/** "bkash" → "bKash": the wallet's own name, not the admin's tile label. */
-function channelName(channelId: string) {
-  return DEPOSIT_CHANNELS.find((c) => c.id === channelId)?.name ?? channelId;
 }
 
 function MethodIcon({ method, size }: { method: { icon: string; color: string }; size: number }) {

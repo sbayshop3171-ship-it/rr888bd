@@ -330,7 +330,10 @@ async function reviewWithdrawal(
     );
     const withdrawal = (rows as Record<string, unknown>[])[0];
     if (!withdrawal) throw new Error('Withdrawal request not found');
-    if (withdrawal.state !== 'pending' && !(withdrawal.state === 'approved' && !approve)) {
+    // A request can be reviewed exactly once. In particular, never allow an
+    // already-approved withdrawal to be rejected later and refunded a second
+    // time through a stale admin tab or a repeated RPC call.
+    if (withdrawal.state !== 'pending') {
       throw new Error('Withdrawal request already answered');
     }
 
