@@ -74,7 +74,12 @@ export const isBackendReady = () => {
 
 function apiBaseUrl() {
   if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
-  return process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  // Server-side calls must stay inside this Next process. The public URL may
+  // be behind Cloudflare, and localhost:3000 can belong to another app on a
+  // multi-site VPS. SERVICE_PORT is set by the live systemd unit; PORT covers
+  // normal `next dev` and `next start` runs.
+  return process.env.INTERNAL_API_URL
+    || `http://127.0.0.1:${process.env.SERVICE_PORT || process.env.PORT || '3000'}`;
 }
 
 function apiUrl(path: string) {
@@ -187,9 +192,16 @@ class MysqlQuery implements QueryBuilder {
   }
 
   async request() {
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    // Server-side compatibility queries do not carry the browser cookie. The
+    // internal key keeps those calls on the same process without exposing a
+    // database credential to the browser.
+    if (typeof window === 'undefined' && process.env.ADMIN_PASSWORD) {
+      headers['x-internal-db-key'] = process.env.ADMIN_PASSWORD;
+    }
     const res = await fetch(apiUrl('/api/db/query'), {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers,
       body: JSON.stringify({
         table: this.table,
         columns: this.cols,
@@ -203,7 +215,7 @@ class MysqlQuery implements QueryBuilder {
         payload: this.data,
       }),
     });
-    const json = await res.json();
+    const json = await res.json().catch(() => ({} as Record<string, unknown>));
     if (!res.ok) throw new Error(json.message || 'Database query failed');
     return json;
   }

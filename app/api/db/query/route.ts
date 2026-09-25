@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
     if (action === 'write') {
       if (operation === 'insert' && payload && typeof payload === 'object') {
-        const entries = Object.entries(payload).filter(([, value]) => value !== undefined && value !== null);
+        const entries = Object.entries(payload).filter(([, value]) => value !== undefined);
         if (entries.length) {
           const fields = entries.map(([key]) => `\`${key}\``).join(', ');
           const placeholders = entries.map(() => '?').join(', ');
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       }
 
       if (operation === 'update' && whereKeys.length) {
-        const entries = Object.entries(payload || {}).filter(([, value]) => value !== undefined && value !== null);
+        const entries = Object.entries(payload || {}).filter(([, value]) => value !== undefined);
         if (!entries.length) return NextResponse.json({ ok: true, affectedRow: { affectedRows: 0 } });
         const setFields = entries.map(([key]) => `\`${key}\` = ?`).join(', ');
         const stmt = `UPDATE \`${table}\` SET ${setFields} ${whereClause}`;
@@ -90,7 +90,29 @@ export async function POST(req: Request) {
     }
 
     const [rows] = await pool.query(`SELECT ${safeColumns} FROM \`${table}\`${whereClause}${orderClause}${limitClause}`, values as any[]);
-    return NextResponse.json({ ok: true, rows: Array.isArray(rows) ? rows : [] });
+    const resultRows = Array.isArray(rows) ? rows as Record<string, unknown>[] : [];
+
+    // The old Supabase client accepted an embedded `wallets (...)` select.
+    // MySQL does not, so hydrate that relation explicitly for the admin
+    // player list instead of silently rendering every balance as zero.
+    if (table === 'profiles' && /\bwallets\s*\(/i.test(String(columns)) && resultRows.length) {
+      const ids = resultRows
+        .map((row) => String(row.user_id ?? row.id ?? ''))
+        .filter((id) => /^\d+$/.test(id));
+      if (ids.length) {
+        const [walletRows] = await pool.query(
+          `SELECT user_id, balance, bonus_balance, turnover_need, turnover_done
+           FROM wallets WHERE user_id IN (${ids.map(() => '?').join(', ')})`,
+          ids,
+        );
+        const byUser = new Map(
+          (walletRows as Record<string, unknown>[]).map((wallet) => [String(wallet.user_id), wallet]),
+        );
+        for (const row of resultRows) row.wallets = byUser.get(String(row.user_id ?? row.id ?? '')) ?? null;
+      }
+    }
+
+    return NextResponse.json({ ok: true, rows: resultRows });
   } catch (error) {
     return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : 'Database error' }, { status: 500 });
   }

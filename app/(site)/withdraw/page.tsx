@@ -142,6 +142,7 @@ export default function WithdrawPage() {
     const { count } = await supabase
       .from('withdrawals')
       .select('id', { count: 'exact', head: true })
+      .eq('user_id', session.user.id)
       // counted the way the server counts: a rejected request is not one used
       .in('state', ['pending', 'approved'])
       .gte('created_at', start.toISOString());
@@ -152,6 +153,7 @@ export default function WithdrawPage() {
     const { data: open, error } = await supabase
       .from('withdrawals')
       .select('amount')
+      .eq('user_id', session.user.id)
       .eq('state', 'pending')
       .eq('debited', false);
     setWaiting(error ? 0 : toTaka(((open as { amount: number }[] | null) ?? []).reduce((sum, r) => sum + Number(r.amount), 0)));

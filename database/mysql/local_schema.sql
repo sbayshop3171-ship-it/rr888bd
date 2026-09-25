@@ -73,6 +73,20 @@ CREATE TABLE IF NOT EXISTS `payout_accounts` (
   CONSTRAINT `fk_payout_accounts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `account_appeals` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` varchar(255) NOT NULL,
+  `message` varchar(500) NOT NULL,
+  `state` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `reviewed_at` timestamp NULL DEFAULT NULL,
+  `reviewed_by` varchar(255) DEFAULT NULL,
+  `admin_note` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_account_appeals_user_created` (`user_id`, `created_at`),
+  KEY `idx_account_appeals_state` (`state`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `admin_users` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `username` varchar(80) NOT NULL,

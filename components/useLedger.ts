@@ -43,6 +43,7 @@ export function useLedger(limit = 200) {
     void supabase
       .from('transactions')
       .select('id, kind, amount, balance_after, ref, created_at')
+      .eq('user_id', session.user.id)
       .order('id', { ascending: false })
       .limit(limit)
       .then((result) => { if (live) setRows((result.data as LedgerRow[] | null) ?? []); });

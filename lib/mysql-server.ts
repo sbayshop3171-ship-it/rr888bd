@@ -13,9 +13,11 @@ export interface MysqlConfig {
 const MYSQL_COLLATION = 'utf8mb4_unicode_ci';
 const MYSQL_POOL_KEY = '__rr888bd_mysql_server_pool__';
 const MYSQL_COLLATION_READY_KEY = '__rr888bd_mysql_collation_ready__';
+const MYSQL_SCHEMA_READY_KEY = '__rr888bd_mysql_schema_ready__';
 const globalForPool = globalThis as typeof globalThis & {
   [MYSQL_POOL_KEY]?: Awaited<ReturnType<typeof mysql.createPool>> & { __pk?: string };
   [MYSQL_COLLATION_READY_KEY]?: Promise<void>;
+  [MYSQL_SCHEMA_READY_KEY]?: Promise<void>;
 };
 
 export function resolveMysqlConfig(): MysqlConfig {
@@ -53,6 +55,16 @@ export async function getMysqlPool() {
 }
 
 export async function ensureMysqlSchema() {
+  if (globalForPool[MYSQL_SCHEMA_READY_KEY]) return globalForPool[MYSQL_SCHEMA_READY_KEY];
+  const ready = ensureMysqlSchemaOnce();
+  globalForPool[MYSQL_SCHEMA_READY_KEY] = ready.catch((error) => {
+    globalForPool[MYSQL_SCHEMA_READY_KEY] = undefined;
+    throw error;
+  });
+  return globalForPool[MYSQL_SCHEMA_READY_KEY];
+}
+
+async function ensureMysqlSchemaOnce() {
   const config = resolveMysqlConfig();
   const root = await mysql.createConnection({
     host: config.host,
@@ -244,6 +256,22 @@ export async function ensureMysqlSchema() {
         UNIQUE KEY uq_payout_account (user_id, channel_id, account_no),
         KEY idx_payout_accounts_user (user_id),
         CONSTRAINT fk_payout_accounts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS account_appeals (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        user_id VARCHAR(255) NOT NULL,
+        message VARCHAR(500) NOT NULL,
+        state ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+        reviewed_at TIMESTAMP NULL DEFAULT NULL,
+        reviewed_by VARCHAR(255) DEFAULT NULL,
+        admin_note TEXT DEFAULT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_account_appeals_user_created (user_id, created_at),
+        KEY idx_account_appeals_state (state)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
