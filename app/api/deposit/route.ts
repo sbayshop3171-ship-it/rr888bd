@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   try {
     const body = await req.json() as Record<string, unknown>;
-    const userId = parseMysqlUserId(body.user_id);
+    const requestedUserId = parseMysqlUserId(body.user_id);
     const gateway = String(body.gateway ?? '').trim();
     const trxid = String(body.trxid ?? '').trim().toUpperCase();
     const senderNumber = body.sender_number == null ? null : String(body.sender_number).trim();
@@ -25,9 +25,15 @@ export async function POST(req: Request) {
     const trxRequired = method?.trxRequired !== false;
 
     const sessionUserId = await currentSessionUserId();
-    if (userId === null || sessionUserId === null || userId !== sessionUserId) {
+    // The HttpOnly server session is authoritative. A stale/empty client
+    // session can happen immediately after registration; accepting the
+    // authenticated cookie's user id keeps that harmless client state from
+    // turning a valid deposit into Unauthorized. A different explicit id is
+    // still rejected so one player cannot submit for another.
+    if (sessionUserId === null || (requestedUserId !== null && requestedUserId !== sessionUserId)) {
       return fail('Unauthorized', 401);
     }
+    const userId = sessionUserId;
     if (!isKnownChannel(gateway)) return fail('Invalid deposit account or gateway', 400);
     if (!Number.isSafeInteger(amount) || amount <= 0) return fail('Invalid deposit amount', 400);
     if (trxRequired && (

@@ -68,6 +68,7 @@ export default function RegisterPage() {
     try {
       const res = await fetch('/api/register', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: f.phone.trim(),
@@ -83,15 +84,20 @@ export default function RegisterPage() {
         return;
       }
 
-      const userId = String(json?.user?.id ?? json?.session?.user?.id ?? '');
-      const session = json?.session ?? {
+      // /api/register returns the compatibility payload under `data`, while
+      // the Supabase-shaped client adapter already unwraps it. Keep this page
+      // on the same shape or the fresh account is stored with an empty user id
+      // and every money endpoint quite correctly answers Unauthorized.
+      const payload = json?.data ?? json;
+      const userId = String(payload?.user?.id ?? payload?.session?.user?.id ?? '');
+      const session = payload?.session ?? {
         user: {
           id: userId,
           email: `${f.phone.trim()}@local-user`,
           created_at: new Date().toISOString(),
         },
       };
-      const accessToken = typeof json?.access_token === 'string' ? json.access_token : null;
+      const accessToken = typeof payload?.access_token === 'string' ? payload.access_token : null;
 
       try {
         localStorage.setItem('rr888bd_session', JSON.stringify(session));
