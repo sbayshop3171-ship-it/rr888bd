@@ -191,6 +191,27 @@ export default function CashierConfigControl({ initial, channels }: { initial: C
         <>
           <div className="adm__card">
             <h2 className="adm__cardh">Deposit Methods</h2>
+            <div style={{ padding: 12, marginBottom: 12, borderRadius: 'var(--r-md)', background: 'rgba(0,0,0,.2)', border: '1px solid var(--line)' }}>
+              <h3 className="adm__cardh" style={{ marginBottom: 8 }}>TrxID minimum length</h3>
+              <div className="adm__formgrid" style={{ marginBottom: 0 }}>
+                {form.deposit.methods.map((m, i) => (
+                  <label className="adm__f" key={`trx-min-${i}`}>
+                    <span>{m.name || `Method ${i + 1}`} — minimum characters</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={255}
+                      value={num(m.trxMinLength)}
+                      disabled={busy}
+                      onChange={(e) => patchDepMethod(i, { trxMinLength: Number(e.target.value) })}
+                    />
+                  </label>
+                ))}
+              </div>
+              <p className="adm__hint" style={{ marginBottom: 0 }}>
+                Default is 10. Set 2 for a minimum of 2 characters or 20 for a minimum of 20 characters, then press Save.
+              </p>
+            </div>
             <div className="adm__tablewrap" style={{ marginBottom: 6 }}>
               <table className="adm__table adm__table--edit">
                 <thead>
