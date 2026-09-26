@@ -145,11 +145,11 @@ export default function DepositPage() {
   const trxPattern = useMemo(() => {
     try { return cfg.trxPattern ? new RegExp(cfg.trxPattern) : null; } catch { return null; }
   }, [cfg.trxPattern]);
+  const trxMinLength = Math.max(1, Math.min(255, Math.round(method?.trxMinLength ?? 10)));
   // stored the way the database stores it (migration 015): letters and
   // digits, upper case — so a space or a lower-case letter is not a new ID
   const trxClean = trx.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-  const trxShapeOk = trxClean.length >= 6 && trxClean.length <= 20 && !/^(.)\1+$/.test(trxClean)
-    && (method?.channelId !== 'bkash' || trxClean.length === 10);
+  const trxShapeOk = trxClean.length >= trxMinLength && trxClean.length <= 255 && !/^(.)\1+$/.test(trxClean);
   const trxOk = trxClean.length > 0 && trxShapeOk && (!trxPattern || trxPattern.test(trxClean));
 
   // One operator number per visit to the pay screen; a re-entry asks again
@@ -209,7 +209,7 @@ export default function DepositPage() {
   const askConfirm = () => {
     if (!method || !account) return;
     if (method.trxRequired && !trxOk) {
-      setErr(trxClean ? 'That TrxID format is not right' : 'Enter the TrxID');
+      setErr(trxClean ? `TrxID কমপক্ষে ${trxMinLength} অক্ষরের হতে হবে` : 'Enter the TrxID');
       return;
     }
     setErr('');
@@ -412,13 +412,14 @@ export default function DepositPage() {
             autoCapitalize="characters"
             autoComplete="off"
             spellCheck={false}
+            maxLength={255}
           />
           {trxClean && (
             <p className={`cz-trx__state${trxOk ? ' ok' : ' bad'}`}>
               {trxOk
                 ? '✓ TrxID format looks right'
-                : method?.channelId === 'bkash' && trxShapeOk === false && trxClean.length !== 10
-                  ? 'বিকাশের TrxID ১০ অক্ষরের হয়'
+                : trxClean.length < trxMinLength
+                  ? `TrxID কমপক্ষে ${trxMinLength} অক্ষরের হতে হবে`
                   : 'That TrxID format is not right'}
             </p>
           )}

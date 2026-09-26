@@ -93,6 +93,7 @@ function cleanDeposit(
         min,
         max,
         trxRequired: m.trxRequired === undefined ? true : Boolean(m.trxRequired),
+        trxMinLength: clampInt(m.trxMinLength, 1, 255, 10),
         note: text(m.note, 300),
         active: m.active === undefined ? true : Boolean(m.active),
       });
@@ -321,6 +322,8 @@ const LEGACY_WITHDRAW_RULES = [
 /** Payout time, before it was cut to five minutes. englishCopy has already
     turned a stored ২৪ ঘন্টা into this by the time merge sees it. */
 const LEGACY_PROCESSING_TIME = '24 hours';
+/** The old global rule limited every transaction id to 6–20 characters. */
+const LEGACY_TRX_PATTERN = '^[A-Za-z0-9]{6,20}$';
 
 function merge(partial: Partial<CashierConfig>): CashierConfig {
   const deposit = { ...CASHIER_DEFAULTS.deposit, ...(partial.deposit ?? {}) };
@@ -330,13 +333,22 @@ function merge(partial: Partial<CashierConfig>): CashierConfig {
       ...deposit,
       // a method saved before the channel label existed has none
       methods: ensureRocketDepositMethod(normalizeDepositMinimums(freshenIcons(deposit.methods, CASHIER_DEFAULTS.deposit.methods)
-        .map((m) => ({ ...m, channelLabel: m.channelLabel ?? '' }))),
+        .map((m) => ({
+          ...m,
+          channelLabel: m.channelLabel ?? '',
+          trxMinLength: clampInt(m.trxMinLength, 1, 255, 10),
+        }))),
       ),
       amounts: normalizeDepositAmounts(supersededDefault(
         deposit.amounts,
         LEGACY_QUICK_AMOUNTS,
         CASHIER_DEFAULTS.deposit.amounts,
       )),
+      trxPattern: supersededDefault(
+        deposit.trxPattern,
+        LEGACY_TRX_PATTERN,
+        CASHIER_DEFAULTS.deposit.trxPattern,
+      ),
     },
     withdraw: {
       ...withdraw,

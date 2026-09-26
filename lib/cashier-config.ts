@@ -54,6 +54,8 @@ export type DepositMethod = {
   max: number;
   /** transaction id must be typed before submit */
   trxRequired: boolean;
+  /** minimum number of letters/digits accepted in the transaction id */
+  trxMinLength: number;
   /** explanation under the method grid when this one is picked */
   note: string;
   active: boolean;
@@ -241,6 +243,7 @@ export const CASHIER_DEFAULTS: CashierConfig = {
         min: 500,
         max: 30_000,
         trxRequired: true,
+        trxMinLength: 10,
         note: '',
         active: true,
       })),
@@ -259,6 +262,7 @@ export const CASHIER_DEFAULTS: CashierConfig = {
         min: c.min,
         max: c.max,
         trxRequired: true,
+        trxMinLength: 10,
         note: '',
         active: false,
       })),
@@ -277,7 +281,7 @@ export const CASHIER_DEFAULTS: CashierConfig = {
     trxHelpText: 'কিভাবে TrxID পাবেন দেখে নিন',
     trxHelpUrl: '',
     trxPlaceholder: 'TrxID অবশ্যই পূরণ করতে হবে!',
-    trxPattern: '^[A-Za-z0-9]{6,20}$',
+    trxPattern: '^[A-Za-z0-9]{1,255}$',
     confirmTitle: 'নিশ্চিত করুন',
     confirmText: 'এই অর্ডারটি একবারই জমা দেওয়া যাবে। আপনার লেনদেন আইডি ঠিক আছে কিনা দেখে নিন:',
     cautionTitle: 'সতর্কতাঃ',

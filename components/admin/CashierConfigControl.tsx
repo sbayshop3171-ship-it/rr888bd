@@ -43,7 +43,7 @@ const DEPOSIT_TEXTS: [keyof CashierConfig['deposit'], string, boolean][] = [
   ['trxHelpText', 'TrxID help link text', false],
   ['trxHelpUrl', 'TrxID help link (URL; blank makes it toggle the instructions)', false],
   ['trxPlaceholder', 'TrxID input placeholder', false],
-  ['trxPattern', 'TrxID format (regex; blank accepts any text)', false],
+  ['trxPattern', 'TrxID allowed format (regex; minimum length is set per method)', false],
   ['confirmTitle', 'Confirmation dialog heading', false],
   ['confirmText', 'Confirmation dialog text', true],
   ['cautionTitle', 'Caution block heading', false],
@@ -71,7 +71,7 @@ const WITHDRAW_TEXTS: [keyof CashierConfig['withdraw'], string, boolean][] = [
 
 const blankDeposit = (channelId: string): DepositMethod => ({
   id: '', name: '', channelId, payType: 'transfer', bonusLabel: '', bonusPercent: 0,
-  icon: '💳', color: '#0f766e', channelLabel: '', tag: 'GATEWAY', min: 500, max: 30000, trxRequired: true, note: '', active: true,
+  icon: '💳', color: '#0f766e', channelLabel: '', tag: 'GATEWAY', min: 500, max: 30000, trxRequired: true, trxMinLength: 10, note: '', active: true,
 });
 
 const blankWithdraw = (channelId: string): WithdrawMethod => ({
@@ -196,7 +196,7 @@ export default function CashierConfigControl({ initial, channels }: { initial: C
                 <thead>
                   <tr>
                     <th>Order</th><th>Name</th><th>Channel (number)</th><th>Menu</th><th>Bonus %</th><th>Shown on tile</th>
-                    <th>Icon</th><th>Colour</th><th>Channel label</th><th>Tag</th><th>Min</th><th>Max</th><th>TrxID</th><th>Active</th><th></th>
+                    <th>Icon</th><th>Colour</th><th>Channel label</th><th>Tag</th><th>Min</th><th>Max</th><th>TrxID min chars</th><th>TrxID</th><th>Active</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -237,6 +237,7 @@ export default function CashierConfigControl({ initial, channels }: { initial: C
                       <td><input className="adm__mini" style={{ width: 84 }} value={m.tag} placeholder="GATEWAY" disabled={busy} onChange={(e) => patchDepMethod(i, { tag: e.target.value })} /></td>
                       <td><input className="adm__mini" type="number" min={0} style={{ width: 80 }} value={num(m.min)} disabled={busy} onChange={(e) => patchDepMethod(i, { min: Number(e.target.value) })} /></td>
                       <td><input className="adm__mini" type="number" min={0} style={{ width: 96 }} value={num(m.max)} disabled={busy} onChange={(e) => patchDepMethod(i, { max: Number(e.target.value) })} /></td>
+                      <td><input className="adm__mini" type="number" min={1} max={255} style={{ width: 96 }} value={num(m.trxMinLength)} disabled={busy} onChange={(e) => patchDepMethod(i, { trxMinLength: Number(e.target.value) })} /></td>
                       <td>
                         <select className="adm__mini" value={m.trxRequired ? '1' : '0'} disabled={busy} onChange={(e) => patchDepMethod(i, { trxRequired: e.target.value === '1' })}>
                           <option value="1">Required</option><option value="0">Optional</option>
@@ -267,7 +268,8 @@ export default function CashierConfigControl({ initial, channels }: { initial: C
               “Menu” tells the player which option to use in the bKash/Nagad app — Payment
               shows a merchant number, Cash Out an agent number, Send Money a personal
               number (if the Payments tab has no number of that kind, any active number
-              on the channel is used). The icon takes an emoji or an image link.
+              on the channel is used). The icon takes an emoji or an image link. “TrxID min chars”
+              controls the minimum length for that method; the default is 10 and values from 1 to 255 are allowed.
             </p>
           </div>
 

@@ -18,6 +18,11 @@ export async function POST(req: Request) {
     const trxid = String(body.trxid ?? '').trim().toUpperCase();
     const senderNumber = body.sender_number == null ? null : String(body.sender_number).trim();
     const amount = Number(body.amount);
+    const cashier = await getCashierConfig();
+    const methodId = String(body.method_id ?? gateway).trim();
+    const method = cashier.deposit.methods.find((item) => item.id === methodId && item.channelId === gateway);
+    const trxMinLength = Math.max(1, Math.min(255, Math.round(method?.trxMinLength ?? 10)));
+    const trxRequired = method?.trxRequired !== false;
 
     const sessionUserId = await currentSessionUserId();
     if (userId === null || sessionUserId === null || userId !== sessionUserId) {
@@ -25,12 +30,24 @@ export async function POST(req: Request) {
     }
     if (!isKnownChannel(gateway)) return fail('Invalid deposit account or gateway', 400);
     if (!Number.isSafeInteger(amount) || amount <= 0) return fail('Invalid deposit amount', 400);
-    if (!/^[A-Z0-9]{6,20}$/.test(trxid)) return fail('Invalid TrxID format', 400);
+    if (trxRequired && (
+      trxid.length < trxMinLength
+      || trxid.length > 255
+      || !/^[A-Z0-9]+$/.test(trxid)
+      || /^(.)\1+$/.test(trxid)
+    )) return fail(`Invalid TrxID format: minimum ${trxMinLength} characters`, 400);
+    if (trxRequired && cashier.deposit.trxPattern) {
+      try {
+        if (!new RegExp(cashier.deposit.trxPattern).test(trxid)) return fail('Invalid TrxID format', 400);
+      } catch {
+        return fail('Invalid TrxID format', 400);
+      }
+    }
     if (senderNumber && senderNumber.length > 30) return fail('Invalid sender number', 400);
 
     await ensureMysqlSchema();
     const pool = await getMysqlPool();
-    const feeAmount = calculateFeePaisa(amount, (await getCashierConfig()).deposit);
+    const feeAmount = calculateFeePaisa(amount, cashier.deposit);
     const netAmount = amount - feeAmount;
     if (netAmount <= 0) return fail('Deposit amount is not enough to cover the configured fee', 400);
     const [users] = await pool.execute('SELECT id FROM users WHERE id = ? LIMIT 1', [userId]);
@@ -46,7 +63,7 @@ export async function POST(req: Request) {
       `INSERT INTO deposits
         (id, user_id, channel_id, amount, fee_amount, net_amount, state, status, sender_no, txn_id, method, method_id, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, 'pending', 'pending', ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      [id, userId, gateway, amount, feeAmount, netAmount, senderNumber || null, trxid, String(body.method_id ?? gateway), String(body.method_id ?? gateway)],
+      [id, userId, gateway, amount, feeAmount, netAmount, senderNumber || null, trxid, methodId, methodId],
     );
 
     return NextResponse.json({ ok: true, id, state: 'pending' }, { headers: { 'cache-control': 'no-store' } });
