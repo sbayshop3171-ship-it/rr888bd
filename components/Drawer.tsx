@@ -31,6 +31,7 @@ const ACCOUNT_LINKS: Item[] = [
 
 const SUPPORT_LINKS: Item[] = [
   ['🎧', 'Customer Support', '/support'],
+  ['📱', 'App Download', '/download'],
   ['🛡️', 'Security Center', '/security'],
   ['❓', 'Help Center', '/support'],
 ];
