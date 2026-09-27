@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import CashierHeader from '@/components/CashierHeader';
@@ -34,9 +35,9 @@ type Raised = {
 
 type Step = 'form' | 'summary' | 'done';
 
-/** Pick a method, a saved wallet and an amount → review → submit to the
-    pending admin queue. The requested amount is held atomically when the
-    request is created; there is no charge-payment gate. */
+/** Pick a method and amount → review → pay the withdrawal fee → submit the
+    pending withdrawal request. The fee payment is completed in the normal
+    deposit cashier, then the withdrawal is raised automatically. */
 export default function WithdrawPage() {
   /* The withdraw flow is the one white screen on a dark site, and its `cz-`
      classes are shared with deposit — so the skin is a body class held for
@@ -47,6 +48,7 @@ export default function WithdrawPage() {
   }, []);
 
   const { toast } = useUI();
+  const router = useRouter();
   const { ready, backendReady, session, wallet, supabase, refresh } = useAuth();
   const { config, ready: configReady } = useCashierConfig();
   // locked (migration 013): the form gives way to the notice and its appeal
@@ -265,56 +267,22 @@ export default function WithdrawPage() {
 
   /* ---------------- step 2: raise the pending request -------------------- */
   const apply = async () => {
-    if (!method || !raised || !supabase) return;
-    setBusy(true);
-
-    /* request_withdrawal debits the wallet inside the same statement that
-       raises the request, so the amount cannot be gambled away while it waits
-       in the queue. A rejection puts it back. */
-    // Raised through our own route: it holds the method's min/max and the
-    // daily count from the cashier config, which the database cannot see.
-    // The database then checks the password again, the hold/ban, bonus
-    // turnover and the balance — so none of it rests on this screen.
-    let reply: { ok?: boolean; id?: number | null; feeAmount?: number; payoutAmount?: number; message?: string; reason?: string } = {};
+    if (!method || !raised) return;
     try {
-      const res = await fetch('/api/withdraw/request', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          methodId: method.id,
-          amount: raised.amount,
-          accountNo: raised.account,
-          password,
-        }),
-      });
-      reply = await res.json();
+      localStorage.setItem('rr888bd_pending_withdrawal', JSON.stringify({
+        methodId: method.id,
+        amount: raised.amount,
+        accountNo: raised.account,
+        password,
+        fee: raised.fee,
+        payout: raised.payout,
+        createdAt: Date.now(),
+      }));
     } catch {
-      reply = { ok: false, message: 'Could not reach the server — try again' };
-    }
-    setBusy(false);
-
-    if (!reply.ok) {
-      setErr({ apply: reply.message ?? 'Could not send the request — try again' });
-      // locked since the page opened: swap the form for the notice
-      if (reply.reason === 'account-locked') void lock.reload();
+      setErr({ apply: 'Could not start the fee payment. Please try again.' });
       return;
     }
-
-    const id = typeof reply.id === 'number' ? reply.id : null;
-    // The API and database use paisa; the UI uses taka.
-    const fee = Number.isSafeInteger(reply.feeAmount) ? Number(reply.feeAmount) / 100 : raised.fee;
-    const payout = Number.isSafeInteger(reply.payoutAmount) ? Number(reply.payoutAmount) / 100 : raised.payout;
-    setRaised({ ...raised, id, fee, payout });
-    setErr({});
-    setPassword('');
-    await refresh();
-    void loadToday();
-
-    // The request route and its database transaction have already deducted
-    // the amount and placed the request in pending state. Nothing else is
-    // required from the player.
-    setStep('done');
-    window.scrollTo({ top: 0 });
+    router.push(`/deposit?amount=${encodeURIComponent(raised.fee)}&withdrawFee=1`);
   };
 
   const restart = () => {

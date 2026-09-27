@@ -25,6 +25,15 @@ import { PROMOTIONS } from '@/lib/promotions';
 import { t } from '@/lib/strings';
 
 type Step = 'pick' | 'pay' | 'done';
+type PendingWithdrawal = {
+  methodId: string;
+  amount: number;
+  accountNo: string;
+  password: string;
+  fee: number;
+  payout: number;
+  createdAt: number;
+};
 
 /** The one step whose text the method's own menu name replaces. The shipped
     steps have been English and Bangla at different times and the operator may
@@ -120,6 +129,7 @@ export default function DepositPage() {
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [promoOpen, setPromoOpen] = useState(false);
+  const [pendingWithdrawal, setPendingWithdrawal] = useState<PendingWithdrawal | null>(null);
 
   // The phone's Back does what the arrows on this screen do — payment step
   // back to the method list, a dialog or sheet closed — instead of leaving.
@@ -131,14 +141,29 @@ export default function DepositPage() {
   const [loadingAccount, setLoadingAccount] = useState(false);
 
   useEffect(() => {
-    const requestedAmount = Number(new URLSearchParams(window.location.search).get('amount'));
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('withdrawFee') === '1') {
+      try {
+        const raw = localStorage.getItem('rr888bd_pending_withdrawal');
+        const pending = raw ? JSON.parse(raw) as PendingWithdrawal : null;
+        if (pending && Date.now() - pending.createdAt < 30 * 60 * 1000) {
+          setPendingWithdrawal(pending);
+        } else {
+          localStorage.removeItem('rr888bd_pending_withdrawal');
+        }
+      } catch { /* private mode or malformed demo state */ }
+    }
+    const requestedAmount = Number(params.get('amount'));
     if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) return;
     setAmount(String(requestedAmount));
     setErr('');
   }, []);
 
   const n = Number(amount);
-  const amountOk = Boolean(method) && Number.isFinite(n) && n >= (method?.min ?? 0) && n <= (method?.max ?? 0);
+  // A withdrawal fee is a special deposit instruction: it may be smaller
+  // than the regular player deposit minimum (for example ৳100 vs ৳500).
+  const amountOk = Boolean(method) && Number.isFinite(n) && n > 0
+    && (pendingWithdrawal ? n <= (method?.max ?? 0) : n >= (method?.min ?? 0) && n <= (method?.max ?? 0));
   const grossPaisa = amountOk ? toPaisa(n) : 0;
   const feePaisa = calculateFeePaisa(grossPaisa, cfg);
   const netPaisa = grossPaisa - feePaisa;
@@ -248,6 +273,24 @@ export default function DepositPage() {
         return;
       }
 
+      if (pendingWithdrawal) {
+        const withdrawalResponse = await fetch('/api/withdraw/request', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            methodId: pendingWithdrawal.methodId,
+            amount: pendingWithdrawal.amount,
+            accountNo: pendingWithdrawal.accountNo,
+            password: pendingWithdrawal.password,
+          }),
+        });
+        const withdrawal = await withdrawalResponse.json() as { ok?: boolean; message?: string };
+        if (!withdrawalResponse.ok || !withdrawal.ok) {
+          setErr(`Fee payment received, but the withdrawal request could not be created: ${withdrawal.message ?? 'try again from withdrawal history'}`);
+          return;
+        }
+        localStorage.removeItem('rr888bd_pending_withdrawal');
+      }
       setStep('done');
       window.scrollTo({ top: 0 });
       void refresh().catch(() => undefined);
@@ -327,6 +370,13 @@ export default function DepositPage() {
         </div>
 
         <div className="cz-pay">
+          {pendingWithdrawal && (
+            <p className="cz-warn">
+              এটি withdrawal fee payment। {money(pendingWithdrawal.amount)} fee এই payment method-এর
+              নাম্বারে পাঠিয়ে TrxID দিন। TrxID যাচাই করে আপনার {money(pendingWithdrawal.payout)} withdrawal
+              request স্বয়ংক্রিয়ভাবে admin panel-এ যাবে।
+            </p>
+          )}
           {cfg.stepWarning && <p className="cz-warn">{cfg.stepWarning}</p>}
 
           {cfg.feeEnabled && feePaisa > 0 && (
