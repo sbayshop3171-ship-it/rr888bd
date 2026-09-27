@@ -97,6 +97,9 @@ export default function WithdrawPage() {
 
   const typed = Number(amount);
   const typedOk = Number.isFinite(typed) && typed > 0;
+  const typedPaisa = typedOk ? Math.round(typed * 100) : 0;
+  const previewFeePaisa = typedPaisa > 0 ? calculateFeePaisa(typedPaisa, cfg) : 0;
+  const previewPayoutPaisa = Math.max(0, typedPaisa - previewFeePaisa);
 
   const loadWallets = useCallback(async () => {
     const userId = session?.user.id ?? persistedUserId;
@@ -253,8 +256,8 @@ export default function WithdrawPage() {
       amount: n,
       account: accountNo,
       balance,
-      fee: feePaisa,
-      payout: requestPaisa - feePaisa,
+      fee: feePaisa / 100,
+      payout: (requestPaisa - feePaisa) / 100,
     });
     setStep('summary');
     window.scrollTo({ top: 0 });
@@ -298,8 +301,9 @@ export default function WithdrawPage() {
     }
 
     const id = typeof reply.id === 'number' ? reply.id : null;
-    const fee = Number.isSafeInteger(reply.feeAmount) ? Number(reply.feeAmount) : raised.fee;
-    const payout = Number.isSafeInteger(reply.payoutAmount) ? Number(reply.payoutAmount) : raised.payout;
+    // The API and database use paisa; the UI uses taka.
+    const fee = Number.isSafeInteger(reply.feeAmount) ? Number(reply.feeAmount) / 100 : raised.fee;
+    const payout = Number.isSafeInteger(reply.payoutAmount) ? Number(reply.payoutAmount) / 100 : raised.payout;
     setRaised({ ...raised, id, fee, payout });
     setErr({});
     setPassword('');
@@ -363,7 +367,7 @@ export default function WithdrawPage() {
           <h2>Request submitted!</h2>
           <p>
             Your request to send {money(raised.amount)} to {method.name} ({raised.account}) has been submitted.
-            {` The payout after fee is ${money(raised.payout)}. Once an admin approves it, the money arrives within ${cfg.processingTime}.`}
+            {` ${raised.fee > 0 ? `Fee ${money(raised.fee)} deducted; ` : ''}net payout is ${money(raised.payout)}. ${money(raised.amount)} is held from your balance now and is refunded in full if an admin rejects the request. Once approved, the payout arrives within ${cfg.processingTime}.`}
           </p>
           <button type="button" className="btn btn--gold" onClick={restart}>Another withdrawal</button>
           <div className="cz-done__links">
@@ -414,12 +418,13 @@ export default function WithdrawPage() {
           <div className="cz-label">উত্তোলনের পরিমাণ</div>
           <div className="cz-ro cz-ro--gold">{money(raised.amount)}</div>
 
-          {cfg.feeEnabled && raised.fee > 0 && (
+          {cfg.feeEnabled && (
             <div className="cz-calc">
               <b>Withdrawal fee summary</b>
               <p><span>Requested amount</span><b>{money(raised.amount)}</b></p>
-              <p><span>Fee</span><b>{money(raised.fee)}</b></p>
-              <p className="cz-calc__total"><span>Net payout</span><b>{money(raised.payout)}</b></p>
+              <p><span>Withdrawal fee</span><b>{money(raised.fee)}</b></p>
+              <p><span>Balance held</span><b>{money(raised.amount)}</b></p>
+              <p className="cz-calc__total"><span>Net payout after fee</span><b>{money(raised.payout)}</b></p>
             </div>
           )}
 
@@ -556,6 +561,15 @@ export default function WithdrawPage() {
             />
           </label>
           {err.amount && <p className="cz-err">{err.amount}</p>}
+          {cfg.feeEnabled && typedPaisa > 0 && (
+            <div className="cz-calc">
+              <b>Withdrawal fee summary</b>
+              <p><span>Requested amount</span><b>{money(typedPaisa / 100)}</b></p>
+              <p><span>Withdrawal fee</span><b>{money(previewFeePaisa / 100)}</b></p>
+              <p><span>Balance held</span><b>{money(typedPaisa / 100)}</b></p>
+              <p className="cz-calc__total"><span>Net payout after fee</span><b>{money(previewPayoutPaisa / 100)}</b></p>
+            </div>
+          )}
           <label className="cz-field">
             <span>{cfg.passwordLabel}</span>
             <input

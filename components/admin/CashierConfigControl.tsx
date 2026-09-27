@@ -96,10 +96,10 @@ function FeeSettingsCard({
   const sample = calculateFeePaisa(100_000, { feeEnabled: true, feePercent: percent, feeFixed: fixed }) / 100;
   return (
     <div className="adm__card">
-      <h2 className="adm__cardh">{side} Fee</h2>
+      <h2 className="adm__cardh">{side} Fee Settings</h2>
       <div className="adm__formgrid">
         <label className="adm__f">
-          <span>Automatic fee</span>
+          <span>Automatic {side.toLowerCase()} fee</span>
           <select value={enabled ? '1' : '0'} disabled={busy} onChange={(e) => onChange({ feeEnabled: e.target.value === '1' })}>
             <option value="1">On</option>
             <option value="0">Off</option>
@@ -116,7 +116,9 @@ function FeeSettingsCard({
       </div>
       <p className="adm__hint">
         {enabled ? `When enabled, ৳1,000 uses ৳${sample.toFixed(2)} fee (${percent}% + ৳${fixed.toFixed(2)} fixed).` : 'Fee is disabled. Players pay/receive the full amount.'}
-        {side === 'Deposit' ? ' The fee is deducted before wallet credit.' : ' The request holds the gross amount and pays the net amount after this fee.'}
+        {side === 'Deposit'
+          ? ' This deposit fee is separate from withdrawal fees and is deducted before wallet credit.'
+          : ' This withdrawal fee is separate from deposit fees. The gross request is held from the wallet, and only the net amount is paid after approval; a rejection refunds the gross request.'}
       </p>
     </div>
   );

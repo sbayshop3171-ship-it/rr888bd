@@ -239,7 +239,9 @@ export default function CashierHistory({
         const isDeposit = table === 'deposits';
         const done = r.state === 'approved';
         const note = remark(r.admin_note);
-        const effectiveFee = Number(r.fee_amount ?? 0) || Number(r.charge_amount ?? 0);
+        const hasFeeSnapshot = r.fee_amount !== null && r.fee_amount !== undefined;
+        const effectiveFee = hasFeeSnapshot ? Number(r.fee_amount) : Number(r.charge_amount ?? 0);
+        const hasLegacyChargeProof = Boolean(r.charge_channel_id || r.charge_account_no || r.charge_trx_id || r.charge_paid_at);
         // New columns are NOT NULL with a zero default, so a legacy row can
         // carry net_amount/payout_amount = 0 even though its real amount was
         // the gross request. Treat zero as “not snapshotted yet”.
@@ -278,7 +280,7 @@ export default function CashierHistory({
                 <>
                   <div><dt>Paid to account</dt><dd>{copyable(r.account_no)}</dd></div>
                   <div><dt>Fee</dt><dd>{dash(effectiveFee)}</dd></div>
-                  {effectiveFee > 0 && (
+                  {effectiveFee > 0 && hasLegacyChargeProof && (
                     <>
                       <div><dt>Fee paid by</dt><dd>{r.charge_channel_id ? channelName(r.charge_channel_id) : '—'}</dd></div>
                       <div><dt>Fee sent to</dt><dd>{copyable(r.charge_account_no)}</dd></div>
