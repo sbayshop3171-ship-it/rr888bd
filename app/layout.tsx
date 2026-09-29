@@ -8,6 +8,7 @@ const DESCRIPTION =
   'Bangladesh’s online gaming platform — live casino, slots, cricket exchange, fishing and lottery.';
 const SOCIAL_IMAGE = '/social-preview.jpg?v=rr888bd-social-20260914';
 const APP_ICON_VERSION = 'apps-logo-20260914-favicon';
+const META_PIXEL_ID = '1600407541581226';
 
 export const metadata: Metadata = {
   // Facebook, Messenger and WhatsApp need an absolute og:image URL; without
@@ -98,6 +99,33 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Meta Pixel: global PageView tracking for every route. */}
+        <script
+          id="meta-pixel"
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              fbq('init', '${META_PIXEL_ID}');
+              fbq('track', 'PageView');
+            `,
+          }}
+        />
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: 'none' }}
+            src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
+            alt=""
+          />
+        </noscript>
         <script
           id="extension-error-guard"
           dangerouslySetInnerHTML={{ __html: extensionErrorGuard }}
